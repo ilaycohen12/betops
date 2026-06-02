@@ -5,7 +5,7 @@ variable "aws_region" {
 }
 
 variable "project" {
-  description = "Project name prefix for all resources"
+  description = "Project name prefix"
   type        = string
   default     = "betops"
 }
