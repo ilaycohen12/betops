@@ -23,6 +23,15 @@ provider "aws" {
   region = var.aws_region
 }
 
+# --- VPC ---
+
+module "vpc" {
+  source = "../../modules/vpc"
+
+  project    = var.project
+  aws_region = var.aws_region
+}
+
 # --- Lambda ---
 
 data "archive_file" "lambda_zip" {
