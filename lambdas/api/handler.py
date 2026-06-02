@@ -5,5 +5,5 @@ def lambda_handler(event, context):
     return {
         "statusCode": 200,
         "headers": {"Content-Type": "application/json"},
-        "body": json.dumps({"this is betops!!!"}),
+        "body": json.dumps({"message": "this is betops!!!"}),
     }
