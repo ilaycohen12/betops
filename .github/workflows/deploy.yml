@@ -4,17 +4,40 @@ on:
   push:
     branches:
       - main
+  pull_request:
+    branches:
+      - main
+
+env:
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_DEFAULT_REGION: us-east-1
+  TF_VERSION: 1.7.0
 
 jobs:
-  terraform:
-    name: Terraform Plan & Apply
+
+  # ── Job 1: Lint ──────────────────────────────────────────────
+  lint:
+    name: Lint Terraform
     runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    env:
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      AWS_DEFAULT_REGION: us-east-1
+      - name: Setup tflint
+        uses: terraform-linters/setup-tflint@v4
 
+      - name: Run tflint
+        working-directory: terraform/envs/prod
+        run: |
+          tflint --init
+          tflint
+
+  # ── Job 2: Plan (runs on every push AND every PR) ────────────
+  plan:
+    name: Terraform Plan
+    runs-on: ubuntu-latest
+    needs: lint
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -22,7 +45,15 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
-          terraform_version: 1.7.0
+          terraform_version: ${{ env.TF_VERSION }}
+
+      # Cache the Terraform provider plugins (~200MB) so init is fast
+      - name: Cache Terraform providers
+        uses: actions/cache@v4
+        with:
+          path: terraform/envs/prod/.terraform
+          key: terraform-${{ env.TF_VERSION }}-${{ hashFiles('terraform/envs/prod/.terraform.lock.hcl') }}
+          restore-keys: terraform-${{ env.TF_VERSION }}-
 
       - name: Terraform Init
         working-directory: terraform/envs/prod
@@ -34,7 +65,48 @@ jobs:
 
       - name: Terraform Plan
         working-directory: terraform/envs/prod
-        run: terraform plan
+        run: terraform plan -out=tfplan
+
+      # On PRs: post the plan output as a comment so you can review before merging
+      - name: Comment plan on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { execSync } = require('child_process');
+            const plan = execSync('terraform show -no-color tfplan', { cwd: 'terraform/envs/prod' }).toString();
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: '## Terraform Plan\n```hcl\n' + plan + '\n```'
+            });
+
+  # ── Job 3: Apply (only runs when merged to main) ─────────────
+  apply:
+    name: Terraform Apply
+    runs-on: ubuntu-latest
+    needs: plan
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Cache Terraform providers
+        uses: actions/cache@v4
+        with:
+          path: terraform/envs/prod/.terraform
+          key: terraform-${{ env.TF_VERSION }}-${{ hashFiles('terraform/envs/prod/.terraform.lock.hcl') }}
+          restore-keys: terraform-${{ env.TF_VERSION }}-
+
+      - name: Terraform Init
+        working-directory: terraform/envs/prod
+        run: terraform init
 
       - name: Terraform Apply
         working-directory: terraform/envs/prod
