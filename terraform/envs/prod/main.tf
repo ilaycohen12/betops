@@ -10,6 +10,10 @@ terraform {
       source  = "hashicorp/archive"
       version = "~> 2.0"
     }
+    random = {
+      source  = "hashicorp/random"
+      version = "~> 3.0"
+    }
   }
 
   backend "s3" {
@@ -30,6 +34,16 @@ module "vpc" {
 
   project    = var.project
   aws_region = var.aws_region
+}
+
+# --- RDS ---
+
+module "rds" {
+  source = "../../modules/rds"
+
+  project            = var.project
+  private_subnet_ids = [module.vpc.private_subnet_id, module.vpc.private_subnet_b_id]
+  rds_sg_id          = module.vpc.rds_sg_id
 }
 
 # --- Lambda ---
