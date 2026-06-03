@@ -4,9 +4,11 @@ on:
   push:
     branches:
       - main
+      - dev
   pull_request:
     branches:
       - main
+      - dev
 
 permissions:
   contents: read
@@ -21,10 +23,28 @@ env:
 
 jobs:
 
-  # ── Job 1: Lint ──────────────────────────────────────────────
+  # ── Determine environment ─────────────────────────────────────────────────
+  set-env:
+    name: Set environment
+    runs-on: ubuntu-latest
+    outputs:
+      tf_env: ${{ steps.env.outputs.tf_env }}
+    steps:
+      - name: Resolve environment
+        id: env
+        run: |
+          BRANCH="${{ github.base_ref || github.ref_name }}"
+          if [ "$BRANCH" = "main" ]; then
+            echo "tf_env=prod" >> $GITHUB_OUTPUT
+          else
+            echo "tf_env=dev" >> $GITHUB_OUTPUT
+          fi
+
+  # ── Job 1: Lint ──────────────────────────────────────────────────────────
   lint:
     name: Lint Terraform
     runs-on: ubuntu-latest
+    needs: set-env
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -33,16 +53,16 @@ jobs:
         uses: terraform-linters/setup-tflint@v4
 
       - name: Run tflint
-        working-directory: terraform/envs/prod
+        working-directory: terraform/envs/${{ needs.set-env.outputs.tf_env }}
         run: |
           tflint --init
           tflint
 
-  # ── Job 2: Plan (runs on every push AND every PR) ────────────
+  # ── Job 2: Plan ──────────────────────────────────────────────────────────
   plan:
-    name: Terraform Plan
+    name: Terraform Plan (${{ needs.set-env.outputs.tf_env }})
     runs-on: ubuntu-latest
-    needs: lint
+    needs: [set-env, lint]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -52,47 +72,46 @@ jobs:
         with:
           terraform_version: ${{ env.TF_VERSION }}
 
-      # Cache the Terraform provider plugins (~200MB) so init is fast
       - name: Cache Terraform providers
         uses: actions/cache@v4
         with:
-          path: terraform/envs/prod/.terraform
-          key: terraform-${{ env.TF_VERSION }}-${{ hashFiles('terraform/envs/prod/.terraform.lock.hcl') }}
-          restore-keys: terraform-${{ env.TF_VERSION }}-
+          path: terraform/envs/${{ needs.set-env.outputs.tf_env }}/.terraform
+          key: terraform-${{ env.TF_VERSION }}-${{ needs.set-env.outputs.tf_env }}-${{ hashFiles(format('terraform/envs/{0}/.terraform.lock.hcl', needs.set-env.outputs.tf_env)) }}
+          restore-keys: terraform-${{ env.TF_VERSION }}-${{ needs.set-env.outputs.tf_env }}-
 
       - name: Terraform Init
-        working-directory: terraform/envs/prod
+        working-directory: terraform/envs/${{ needs.set-env.outputs.tf_env }}
         run: terraform init
 
       - name: Terraform Validate
-        working-directory: terraform/envs/prod
+        working-directory: terraform/envs/${{ needs.set-env.outputs.tf_env }}
         run: terraform validate
 
       - name: Terraform Plan
-        working-directory: terraform/envs/prod
+        working-directory: terraform/envs/${{ needs.set-env.outputs.tf_env }}
         run: terraform plan -out=tfplan
 
-      # On PRs: post the plan output as a comment so you can review before merging
       - name: Comment plan on PR
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v7
         with:
           script: |
             const { execSync } = require('child_process');
-            const plan = execSync('terraform show -no-color tfplan', { cwd: 'terraform/envs/prod' }).toString();
+            const env = '${{ needs.set-env.outputs.tf_env }}';
+            const plan = execSync('terraform show -no-color tfplan', { cwd: `terraform/envs/${env}` }).toString();
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: '## Terraform Plan\n```hcl\n' + plan + '\n```'
+              body: `## Terraform Plan (${env})\n\`\`\`hcl\n${plan}\n\`\`\``
             });
 
-  # ── Job 3: Apply (only runs when merged to main) ─────────────
+  # ── Job 3: Apply ─────────────────────────────────────────────────────────
   apply:
-    name: Terraform Apply
+    name: Terraform Apply (${{ needs.set-env.outputs.tf_env }})
     runs-on: ubuntu-latest
-    needs: plan
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: [set-env, plan]
+    if: github.event_name == 'push'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -105,14 +124,14 @@ jobs:
       - name: Cache Terraform providers
         uses: actions/cache@v4
         with:
-          path: terraform/envs/prod/.terraform
-          key: terraform-${{ env.TF_VERSION }}-${{ hashFiles('terraform/envs/prod/.terraform.lock.hcl') }}
-          restore-keys: terraform-${{ env.TF_VERSION }}-
+          path: terraform/envs/${{ needs.set-env.outputs.tf_env }}/.terraform
+          key: terraform-${{ env.TF_VERSION }}-${{ needs.set-env.outputs.tf_env }}-${{ hashFiles(format('terraform/envs/{0}/.terraform.lock.hcl', needs.set-env.outputs.tf_env)) }}
+          restore-keys: terraform-${{ env.TF_VERSION }}-${{ needs.set-env.outputs.tf_env }}-
 
       - name: Terraform Init
-        working-directory: terraform/envs/prod
+        working-directory: terraform/envs/${{ needs.set-env.outputs.tf_env }}
         run: terraform init
 
       - name: Terraform Apply
-        working-directory: terraform/envs/prod
+        working-directory: terraform/envs/${{ needs.set-env.outputs.tf_env }}
         run: terraform apply -auto-approve
