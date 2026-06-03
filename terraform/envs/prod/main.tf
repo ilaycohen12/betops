@@ -44,6 +44,7 @@ module "rds" {
   project            = var.project
   private_subnet_ids = [module.vpc.private_subnet_id, module.vpc.private_subnet_b_id]
   rds_sg_id          = module.vpc.rds_sg_id
+  backup_retention   = 0  # free tier doesn't support backups — set to 7 when you upgrade
 }
 
 # --- Lambda ---
