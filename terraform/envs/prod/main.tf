@@ -27,13 +27,25 @@ provider "aws" {
   region = var.aws_region
 }
 
+locals {
+  tags = {
+    project = var.project
+    env     = "prod"
+    managed = "terraform"
+  }
+}
+
 # --- VPC ---
 
 module "vpc" {
   source = "../../modules/vpc"
 
-  project    = var.project
-  aws_region = var.aws_region
+  project               = var.project
+  aws_region            = var.aws_region
+  vpc_cidr              = var.vpc_cidr
+  public_subnet_cidr    = var.public_subnet_cidr
+  private_subnet_cidr   = var.private_subnet_cidr
+  private_subnet_b_cidr = var.private_subnet_b_cidr
 }
 
 # --- RDS ---
@@ -44,74 +56,50 @@ module "rds" {
   project            = var.project
   private_subnet_ids = [module.vpc.private_subnet_id, module.vpc.private_subnet_b_id]
   rds_sg_id          = module.vpc.rds_sg_id
-  backup_retention   = 0  # free tier doesn't support backups — set to 7 when you upgrade
+  backup_retention   = var.backup_retention
+}
+
+# --- SQS ---
+
+module "sqs" {
+  source  = "../../modules/sqs"
+  project = var.project
+  tags    = local.tags
 }
 
 # --- Lambda ---
 
-data "archive_file" "lambda_zip" {
-  type        = "zip"
-  source_file = "${path.module}/../../../lambdas/api/handler.py"
-  output_path = "${path.module}/lambda.zip"
-}
+module "lambda" {
+  source = "../../modules/lambda"
 
-resource "aws_iam_role" "lambda_exec" {
-  name = "${var.project}-lambda-exec"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [{
-      Action    = "sts:AssumeRole"
-      Effect    = "Allow"
-      Principal = { Service = "lambda.amazonaws.com" }
-    }]
-  })
-}
-
-resource "aws_iam_role_policy_attachment" "lambda_basic" {
-  role       = aws_iam_role.lambda_exec.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
-}
-
-resource "aws_lambda_function" "api" {
-  function_name    = "${var.project}-api"
-  role             = aws_iam_role.lambda_exec.arn
-  handler          = "handler.lambda_handler"
-  runtime          = "python3.12"
-  filename         = data.archive_file.lambda_zip.output_path
-  source_code_hash = data.archive_file.lambda_zip.output_base64sha256
+  project       = var.project
+  handler_path  = "${path.module}/../../../lambdas/api/handler.py"
+  db_secret_arn = module.rds.db_secret_arn
+  sqs_queue_arn = module.sqs.queue_arn
+  sqs_queue_url = module.sqs.queue_url
+  tags          = local.tags
 }
 
 # --- API Gateway ---
 
-resource "aws_apigatewayv2_api" "http" {
-  name          = "${var.project}-api"
-  protocol_type = "HTTP"
+module "api_gateway" {
+  source = "../../modules/api-gateway"
+
+  project              = var.project
+  lambda_invoke_arn    = module.lambda.invoke_arn
+  lambda_function_name = module.lambda.function_name
+  tags                 = local.tags
 }
 
-resource "aws_apigatewayv2_integration" "lambda" {
-  api_id                 = aws_apigatewayv2_api.http.id
-  integration_type       = "AWS_PROXY"
-  integration_uri        = aws_lambda_function.api.invoke_arn
-  payload_format_version = "2.0"
-}
+# --- Tailscale ---
 
-resource "aws_apigatewayv2_route" "default" {
-  api_id    = aws_apigatewayv2_api.http.id
-  route_key = "GET /"
-  target    = "integrations/${aws_apigatewayv2_integration.lambda.id}"
-}
+module "tailscale" {
+  source = "../../modules/tailscale"
 
-resource "aws_apigatewayv2_stage" "default" {
-  api_id      = aws_apigatewayv2_api.http.id
-  name        = "$default"
-  auto_deploy = true
-}
-
-resource "aws_lambda_permission" "apigw" {
-  statement_id  = "AllowAPIGateway"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.api.function_name
-  principal     = "apigateway.amazonaws.com"
-  source_arn    = "${aws_apigatewayv2_api.http.execution_arn}/*/*"
+  project            = var.project
+  vpc_id             = module.vpc.vpc_id
+  public_subnet_id   = module.vpc.public_subnet_id
+  vpc_cidr           = var.vpc_cidr
+  tailscale_auth_key = var.tailscale_auth_key
+  tags               = local.tags
 }

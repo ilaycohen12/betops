@@ -36,3 +36,9 @@ variable "backup_retention" {
   type        = number
   default     = 0
 }
+
+variable "tags" {
+  description = "Tags to apply to all resources"
+  type        = map(string)
+  default     = {}
+}

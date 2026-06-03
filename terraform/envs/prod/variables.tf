@@ -9,3 +9,35 @@ variable "project" {
   type        = string
   default     = "betops"
 }
+
+variable "vpc_cidr" {
+  type    = string
+  default = "10.0.0.0/16"
+}
+
+variable "public_subnet_cidr" {
+  type    = string
+  default = "10.0.1.0/24"
+}
+
+variable "private_subnet_cidr" {
+  type    = string
+  default = "10.0.2.0/24"
+}
+
+variable "private_subnet_b_cidr" {
+  type    = string
+  default = "10.0.3.0/24"
+}
+
+variable "backup_retention" {
+  description = "RDS backup retention in days"
+  type        = number
+  default     = 0
+}
+
+variable "tailscale_auth_key" {
+  description = "Tailscale auth key — set via TF_VAR_tailscale_auth_key or GitHub secret"
+  type        = string
+  sensitive   = true
+}
