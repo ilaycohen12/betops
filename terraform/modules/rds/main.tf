@@ -52,8 +52,8 @@ resource "aws_db_instance" "main" {
   db_subnet_group_name   = aws_db_subnet_group.main.name
   vpc_security_group_ids = [var.rds_sg_id]
 
-  # Backups — keep 7 days of automated backups
-  backup_retention_period = 7
+  # Backups — configurable per environment (0 = disabled, useful in dev)
+  backup_retention_period = var.backup_retention
   backup_window           = "03:00-04:00" # 3-4am UTC
 
   # Maintenance window — apply patches on Sunday nights
