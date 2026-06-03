@@ -30,3 +30,9 @@ variable "rds_sg_id" {
   description = "Security group ID for RDS"
   type        = string
 }
+
+variable "backup_retention" {
+  description = "Number of days to retain automated backups (0 = disabled)"
+  type        = number
+  default     = 0
+}
