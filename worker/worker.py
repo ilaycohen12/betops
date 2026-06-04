@@ -6,7 +6,7 @@ import boto3
 import os
 import time
 
-QUEUE_URL = os.environ["SQS_QUEUE_URL"]
+QUEUE_URL = os.environ.get("SQS_QUEUE_URL", "")
 
 
 def process_message(message: dict):
