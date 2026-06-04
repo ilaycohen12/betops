@@ -19,4 +19,7 @@ jobs:
           echo "KUBECONFIG=$PWD/kubeconfig.yaml" >> $GITHUB_ENV
 
       - name: Test cluster connection
-        run: kubectl get nodes
+        run: |
+          kubectl get nodes -o custom-columns="NODE:.metadata.name,CPU:.status.capacity.cpu,MEMORY:.status.capacity.memory"
+          echo "---"
+          kubectl describe nodes | grep -A 5 "Allocated resources"
