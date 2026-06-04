@@ -141,16 +141,34 @@ def lambda_handler(event, context):
     if path == "/health":
         return _resp(200, {"status": "ok"})
 
-    try:
-        conn = _get_db_conn()
-    except Exception as e:
-        return _resp(500, {"error": f"db connection failed: {e}"})
-
-    try:
-        if path == "/markets" and method == "GET":
+    if path == "/markets" and method == "GET":
+        try:
+            conn = _get_db_conn()
+        except Exception as e:
+            return _resp(500, {"error": f"db connection failed: {e}"})
+        try:
             return _get_markets(conn)
-        if path == "/bets" and method == "POST":
+        finally:
+            conn.close()
+
+    if path == "/bets" and method == "POST":
+        # validate before touching DB
+        try:
+            data = json.loads(event.get("body") or "{}")
+        except json.JSONDecodeError:
+            return _resp(400, {"error": "invalid JSON"})
+        for field in ("user_id", "market_id", "side", "amount"):
+            if field not in data:
+                return _resp(400, {"error": f"missing field: {field}"})
+        if data["side"] not in ("yes", "no"):
+            return _resp(400, {"error": "side must be 'yes' or 'no'"})
+        try:
+            conn = _get_db_conn()
+        except Exception as e:
+            return _resp(500, {"error": f"db connection failed: {e}"})
+        try:
             return _post_bet(conn, event.get("body"))
-        return _resp(404, {"error": "not found"})
-    finally:
-        conn.close()
+        finally:
+            conn.close()
+
+    return _resp(404, {"error": "not found"})
