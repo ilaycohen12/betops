@@ -74,6 +74,7 @@ resource "aws_lambda_function" "api" {
   runtime          = "python3.12"
   filename         = data.archive_file.zip.output_path
   source_code_hash = data.archive_file.zip.output_base64sha256
+  timeout          = 30
 
   vpc_config {
     subnet_ids         = var.subnet_ids
