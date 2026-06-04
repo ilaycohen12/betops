@@ -5,10 +5,14 @@ on:
     branches:
       - main
       - dev
+    paths:
+      - 'terraform/**'
   pull_request:
     branches:
       - main
       - dev
+    paths:
+      - 'terraform/**'
 
 permissions:
   contents: read
@@ -132,6 +136,13 @@ jobs:
       - name: Terraform Init
         working-directory: terraform/envs/${{ needs.set-env.outputs.tf_env }}
         run: terraform init
+
+      # Import existing resources that were created before modularization
+      # Each import is safe to run even if the resource is already in state (|| true)
+      - name: Terraform Import existing resources
+        working-directory: terraform/envs/${{ needs.set-env.outputs.tf_env }}
+        run: |
+          terraform import module.lambda.aws_iam_role.lambda_exec ${{ needs.set-env.outputs.tf_env == 'prod' && 'betops-lambda-exec' || 'betops-dev-lambda-exec' }} || true
 
       - name: Terraform Apply
         working-directory: terraform/envs/${{ needs.set-env.outputs.tf_env }}
