@@ -172,6 +172,28 @@ CREATE INDEX IF NOT EXISTS transactions_user_id_idx ON transactions (user_id);
 
 
 def lambda_handler(event, context):
+    if event.get("action") == "seed":
+        try:
+            conn = _get_db_conn()
+            with conn.cursor() as cur:
+                cur.execute("""
+                    INSERT INTO users (id, email, name, balance) VALUES
+                        ('00000000-0000-0000-0000-000000000001', 'alice@example.com', 'Alice', 500.00),
+                        ('00000000-0000-0000-0000-000000000002', 'bob@example.com', 'Bob', 500.00),
+                        ('00000000-0000-0000-0000-000000000003', 'charlie@example.com', 'Charlie', 500.00)
+                    ON CONFLICT DO NOTHING;
+
+                    INSERT INTO markets (id, question, description, yes_price, created_by, closes_at) VALUES
+                        ('10000000-0000-0000-0000-000000000001', 'Will Man City finish top 4 this season?', 'Premier League 2025/26', 0.54, '00000000-0000-0000-0000-000000000001', '2026-05-20 00:00:00+00'),
+                        ('10000000-0000-0000-0000-000000000002', 'Will GPT-5 be released before end of 2025?', NULL, 0.81, '00000000-0000-0000-0000-000000000002', '2025-12-31 00:00:00+00')
+                    ON CONFLICT DO NOTHING;
+                """)
+            conn.commit()
+            conn.close()
+            return {"status": "seed complete"}
+        except Exception as e:
+            return {"status": "error", "error": str(e)}
+
     # Direct Lambda invocation for migrations (not via API Gateway)
     if event.get("action") == "migrate":
         try:
