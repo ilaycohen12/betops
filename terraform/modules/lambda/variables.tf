@@ -23,6 +23,16 @@ variable "sqs_queue_url" {
   type        = string
 }
 
+variable "subnet_ids" {
+  description = "Private subnet IDs to place the Lambda in (required to reach RDS)"
+  type        = list(string)
+}
+
+variable "lambda_sg_id" {
+  description = "Security group ID for the Lambda function"
+  type        = string
+}
+
 variable "tags" {
   description = "Tags to apply to all resources"
   type        = map(string)

@@ -19,6 +19,12 @@ resource "aws_iam_role_policy_attachment" "basic" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
 }
 
+# Required when Lambda runs inside a VPC — allows it to create/manage ENIs
+resource "aws_iam_role_policy_attachment" "vpc" {
+  role       = aws_iam_role.lambda_exec.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
+}
+
 # Allow Lambda to read from Secrets Manager
 resource "aws_iam_role_policy" "secrets" {
   name = "${var.project}-lambda-secrets"
@@ -68,6 +74,11 @@ resource "aws_lambda_function" "api" {
   runtime          = "python3.12"
   filename         = data.archive_file.zip.output_path
   source_code_hash = data.archive_file.zip.output_base64sha256
+
+  vpc_config {
+    subnet_ids         = var.subnet_ids
+    security_group_ids = [var.lambda_sg_id]
+  }
 
   environment {
     variables = {

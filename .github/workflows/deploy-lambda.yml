@@ -51,7 +51,7 @@ jobs:
           python-version: '3.12'
 
       - name: Install dependencies
-        run: pip install -r lambdas/api/requirements-dev.txt
+        run: pip install -r lambdas/api/requirements-dev.txt psycopg2-binary
 
       - name: Run tests
         run: pytest lambdas/api/ -v
@@ -66,8 +66,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Zip Lambda handler
-        run: zip -j lambda.zip lambdas/api/handler.py
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Bundle dependencies
+        run: |
+          pip install -r lambdas/api/requirements.txt -t lambdas/api/package/
+          cd lambdas/api/package && zip -r ../../../lambda.zip . && cd ..
+          zip -g ../../lambda.zip handler.py
 
       - name: Deploy to AWS Lambda
         run: |

@@ -77,6 +77,8 @@ module "lambda" {
   db_secret_arn = module.rds.db_secret_arn
   sqs_queue_arn = module.sqs.queue_arn
   sqs_queue_url = module.sqs.queue_url
+  subnet_ids    = [module.vpc.private_subnet_id, module.vpc.private_subnet_b_id]
+  lambda_sg_id  = module.vpc.lambda_sg_id
   tags          = local.tags
 }
 
