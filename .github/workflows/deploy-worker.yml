@@ -76,6 +76,15 @@ jobs:
       - name: Create namespace
         run: kubectl apply --validate=false -f worker/k8s/namespace.yml
 
+      - name: Create GHCR image pull secret
+        run: |
+          kubectl create secret docker-registry ghcr-secret \
+            --namespace=betops \
+            --docker-server=ghcr.io \
+            --docker-username=ilaycohen12 \
+            --docker-password="${{ secrets.GHCR_PAT }}" \
+            --dry-run=client -o yaml | kubectl apply --validate=false -f -
+
       - name: Apply secrets
         run: |
           kubectl create secret generic betops-secrets \

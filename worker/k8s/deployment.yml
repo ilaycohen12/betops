@@ -13,6 +13,8 @@ spec:
       labels:
         app: betops-worker
     spec:
+      imagePullSecrets:
+        - name: ghcr-secret
       containers:
         - name: worker
           image: ghcr.io/ilaycohen12/betops-worker:latest
