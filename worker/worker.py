@@ -3,19 +3,23 @@ Homelab SQS worker — placeholder.
 Polls SQS, runs calculations, writes results back to RDS.
 """
 import boto3
+import os
 import time
 
-QUEUE_URL = "REPLACE_WITH_SQS_URL"
+QUEUE_URL = os.environ["SQS_QUEUE_URL"]
 
 
 def process_message(message: dict):
-    """Run odds/settlement calculation for a bet event."""
     print(f"Processing: {message}")
     # TODO: implement calculation logic
 
 
 def main():
-    sqs = boto3.client("sqs", region_name="us-east-1")
+    sqs = boto3.client(
+        "sqs",
+        region_name=os.environ.get("AWS_DEFAULT_REGION", "us-east-1"),
+        endpoint_url=os.environ.get("AWS_ENDPOINT_URL"),  # set for LocalStack, unset for real AWS
+    )
     print("Worker started, polling SQS...")
     while True:
         response = sqs.receive_message(
