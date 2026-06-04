@@ -88,4 +88,8 @@ resource "aws_lambda_function" "api" {
   }
 
   tags = var.tags
+
+  lifecycle {
+    ignore_changes = [filename, source_code_hash]
+  }
 }
