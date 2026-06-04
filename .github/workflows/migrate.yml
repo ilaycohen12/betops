@@ -4,11 +4,17 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: 'Environment to migrate'
+        description: 'Environment'
         required: true
         default: 'prod'
         type: choice
         options: [prod, dev]
+      action:
+        description: 'Action to run'
+        required: true
+        default: 'migrate'
+        type: choice
+        options: [migrate, seed]
 
 permissions:
   contents: read
@@ -32,11 +38,11 @@ jobs:
             echo "name=betops-dev-api" >> $GITHUB_OUTPUT
           fi
 
-      - name: Invoke Lambda migration
+      - name: Invoke Lambda
         run: |
           aws lambda invoke \
             --function-name ${{ steps.fn.outputs.name }} \
-            --payload '{"action":"migrate"}' \
+            --payload '{"action":"${{ inputs.action }}"}' \
             --cli-binary-format raw-in-base64-out \
             response.json
           cat response.json
