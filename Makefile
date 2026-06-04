@@ -1,4 +1,4 @@
-.PHONY: local local-down test test-lambda test-worker
+.PHONY: local local-down db-migrate db-seed test test-lambda test-worker
 
 local:
 	docker compose up -d
@@ -6,6 +6,12 @@ local:
 
 local-down:
 	docker compose down -v
+
+db-migrate:
+	PGPASSWORD=betops psql -h localhost -U betops -d betops -f db/migrations/001_initial_schema.sql
+
+db-seed:
+	PGPASSWORD=betops psql -h localhost -U betops -d betops -f db/seed.sql
 
 test-lambda:
 	pip install -q -r lambdas/api/requirements-dev.txt
