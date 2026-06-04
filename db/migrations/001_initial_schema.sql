@@ -1,5 +1,5 @@
 -- Users: one row per friend
-CREATE TABLE users (
+CREATE TABLE IF NOT EXISTS users (
     id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     email      TEXT NOT NULL UNIQUE,
     name       TEXT NOT NULL,
@@ -8,7 +8,7 @@ CREATE TABLE users (
 );
 
 -- Markets: one row per question ("Will Man City finish top 4?")
-CREATE TABLE markets (
+CREATE TABLE IF NOT EXISTS markets (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     question    TEXT NOT NULL,
     description TEXT,
@@ -21,7 +21,7 @@ CREATE TABLE markets (
 );
 
 -- Bets: one row per bet placed
-CREATE TABLE bets (
+CREATE TABLE IF NOT EXISTS bets (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id     UUID NOT NULL REFERENCES users(id),
     market_id   UUID NOT NULL REFERENCES markets(id),
@@ -32,7 +32,7 @@ CREATE TABLE bets (
 );
 
 -- Transactions: audit log of every balance change
-CREATE TABLE transactions (
+CREATE TABLE IF NOT EXISTS transactions (
     id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     user_id      UUID NOT NULL REFERENCES users(id),
     amount       NUMERIC(10, 2) NOT NULL, -- positive = credit, negative = debit

@@ -129,7 +129,61 @@ def _post_bet(conn, raw_body):
     })
 
 
+SCHEMA = """
+CREATE TABLE IF NOT EXISTS users (
+    id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    email      TEXT NOT NULL UNIQUE,
+    name       TEXT NOT NULL,
+    balance    NUMERIC(10, 2) NOT NULL DEFAULT 500.00,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS markets (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    question    TEXT NOT NULL,
+    description TEXT,
+    status      TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open', 'closed', 'settled')),
+    result      TEXT CHECK (result IN ('yes', 'no')),
+    yes_price   NUMERIC(5, 2) NOT NULL DEFAULT 0.50,
+    created_by  UUID NOT NULL REFERENCES users(id),
+    closes_at   TIMESTAMPTZ,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS bets (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id     UUID NOT NULL REFERENCES users(id),
+    market_id   UUID NOT NULL REFERENCES markets(id),
+    side        TEXT NOT NULL CHECK (side IN ('yes', 'no')),
+    amount      NUMERIC(10, 2) NOT NULL CHECK (amount > 0),
+    yes_price   NUMERIC(5, 2) NOT NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS transactions (
+    id           UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id      UUID NOT NULL REFERENCES users(id),
+    amount       NUMERIC(10, 2) NOT NULL,
+    type         TEXT NOT NULL CHECK (type IN ('bet_placed', 'payout', 'deposit')),
+    reference_id UUID,
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS bets_market_id_idx ON bets (market_id);
+CREATE INDEX IF NOT EXISTS bets_user_id_idx ON bets (user_id);
+CREATE INDEX IF NOT EXISTS transactions_user_id_idx ON transactions (user_id);
+"""
+
+
 def lambda_handler(event, context):
+    # Direct Lambda invocation for migrations (not via API Gateway)
+    if event.get("action") == "migrate":
+        try:
+            conn = _get_db_conn()
+            with conn.cursor() as cur:
+                cur.execute(SCHEMA)
+            conn.commit()
+            conn.close()
+            return {"status": "migration complete"}
+        except Exception as e:
+            return {"status": "error", "error": str(e)}
+
     # Support both API Gateway v1 (httpMethod/path) and v2 (requestContext.http)
     if "requestContext" in event and "http" in event.get("requestContext", {}):
         method = event["requestContext"]["http"]["method"]

@@ -1,0 +1,42 @@
+name: Run DB Migration
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to migrate'
+        required: true
+        default: 'prod'
+        type: choice
+        options: [prod, dev]
+
+permissions:
+  contents: read
+
+env:
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_DEFAULT_REGION: us-east-1
+
+jobs:
+  migrate:
+    name: Migrate (${{ inputs.environment }})
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve function name
+        id: fn
+        run: |
+          if [ "${{ inputs.environment }}" = "prod" ]; then
+            echo "name=betops-api" >> $GITHUB_OUTPUT
+          else
+            echo "name=betops-dev-api" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Invoke Lambda migration
+        run: |
+          aws lambda invoke \
+            --function-name ${{ steps.fn.outputs.name }} \
+            --payload '{"action":"migrate"}' \
+            --cli-binary-format raw-in-base64-out \
+            response.json
+          cat response.json
