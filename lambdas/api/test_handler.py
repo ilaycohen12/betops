@@ -19,25 +19,21 @@ def _event(method, path, body=None):
     }
 
 
-def _mock_conn(markets=None, user=None, market=None, bet=None):
+_SKIP = object()
+
+def _mock_conn(markets=_SKIP, user=_SKIP, market=_SKIP, bet=_SKIP):
     """Build a mock psycopg2 connection with configurable query results."""
     conn = MagicMock()
     cur = MagicMock()
     conn.cursor.return_value.__enter__ = MagicMock(return_value=cur)
     conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
 
-    results = []
-    if markets is not None:
-        results.append(markets)        # fetchall for GET /markets
-    if user is not None:
-        results.append(user)           # fetchone for user balance check
-    if market is not None:
-        results.append(market)         # fetchone for market check
-    if bet is not None:
-        results.append(bet)            # fetchone for INSERT RETURNING
+    if markets is not _SKIP:
+        cur.fetchall.return_value = markets
+    if user is not _SKIP or market is not _SKIP or bet is not _SKIP:
+        fetchone_results = [v for v in (user, market, bet) if v is not _SKIP]
+        cur.fetchone.side_effect = fetchone_results
 
-    cur.fetchall.side_effect = [r for r in results if isinstance(r, list)]
-    cur.fetchone.side_effect = [r for r in results if not isinstance(r, list)]
     return conn
 
 
