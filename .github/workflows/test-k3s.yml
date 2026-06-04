@@ -20,6 +20,8 @@ jobs:
 
       - name: Test cluster connection
         run: |
-          kubectl get nodes -o custom-columns="NODE:.metadata.name,CPU:.status.capacity.cpu,MEMORY:.status.capacity.memory"
+          kubectl get nodes
           echo "---"
-          kubectl describe nodes | grep -A 5 "Allocated resources"
+          kubectl get pods -A
+          echo "---"
+          kubectl describe pod -n betops -l app=betops-worker 2>/dev/null || echo "no worker pod found"
