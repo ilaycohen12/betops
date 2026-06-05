@@ -27,3 +27,7 @@ output "rds_sg_id" {
   description = "RDS security group ID"
   value       = aws_security_group.rds.id
 }
+
+output "private_route_table_id" {
+  value = aws_route_table.private.id
+}

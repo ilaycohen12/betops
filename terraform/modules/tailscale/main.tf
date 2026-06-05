@@ -79,15 +79,22 @@ resource "aws_instance" "tailscale" {
 
   user_data = <<-EOF
     #!/bin/bash
-    # Install Tailscale
-    curl -fsSL https://tailscale.com/install.sh | sh
-
-    # Enable IP forwarding (required for subnet router)
+    # Enable IP forwarding (required for both Tailscale subnet routing and NAT)
     echo 'net.ipv4.ip_forward = 1' >> /etc/sysctl.conf
     sysctl -p
 
+    # NAT: masquerade outbound traffic from private subnets to the internet
+    # This replaces VPC endpoints — Lambda can reach SQS and Secrets Manager via this instance
+    iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+    # Persist iptables rules across reboots
+    yum install -y iptables-services
+    service iptables save
+    systemctl enable iptables
+
+    # Install Tailscale
+    curl -fsSL https://tailscale.com/install.sh | sh
+
     # Authenticate and advertise the VPC subnet
-    # Replace TAILSCALE_AUTH_KEY with your actual auth key from tailscale.com/settings/keys
     tailscale up \
       --authkey="${var.tailscale_auth_key}" \
       --advertise-routes="${var.vpc_cidr}" \
