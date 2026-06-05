@@ -9,13 +9,12 @@ export default function Toast({ message, onDone }) {
   return (
     <div style={{
       position: 'fixed', bottom: 32, left: '50%', transform: 'translateX(-50%)',
-      background: 'linear-gradient(135deg, #1a1a2e, #16213e)',
-      border: '1px solid rgba(168,85,247,0.3)',
-      borderRadius: 14, padding: '12px 22px',
-      fontSize: 14, fontWeight: 500, color: '#f0f0f8',
-      boxShadow: '0 8px 32px rgba(0,0,0,0.5)',
-      zIndex: 200, whiteSpace: 'nowrap',
-      animation: 'fadeUp 0.25s ease both',
+      background: '#f5f5f5', color: '#0c0c0c',
+      padding: '12px 24px', fontSize: 13, fontWeight: 700,
+      letterSpacing: 0.5, textTransform: 'uppercase',
+      zIndex: 200, whiteSpace: 'nowrap', border: '2px solid #0c0c0c',
+      boxShadow: '4px 4px 0 #e63946',
+      animation: 'fadeUp 0.2s ease',
     }}>
       {message}
     </div>

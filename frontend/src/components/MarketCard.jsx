@@ -1,13 +1,13 @@
-import React, { useState } from 'react'
+import React from 'react'
 
 function timeLeft(closes_at) {
   if (!closes_at) return null
   const diff = new Date(closes_at) - new Date()
-  if (diff <= 0) return 'Closing soon'
+  if (diff <= 0) return 'Closed'
   const days = Math.floor(diff / (1000 * 60 * 60 * 24))
   const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
-  if (days > 0) return `${days}d`
-  return `${hours}h`
+  if (days > 0) return `${days}d left`
+  return `${hours}h left`
 }
 
 export default function MarketCard({ market, onBet, onResolve, showResolve }) {
@@ -19,94 +19,74 @@ export default function MarketCard({ market, onBet, onResolve, showResolve }) {
 
   return (
     <div style={{
-      background: '#111118',
-      borderRadius: 18,
-      padding: '18px 20px',
-      border: '1px solid rgba(255,255,255,0.07)',
-      opacity: isSettled ? 0.6 : 1,
-      transition: 'all 0.2s',
-    }}
-      onMouseEnter={e => !isSettled && isOpen && (e.currentTarget.style.borderColor = 'rgba(168,85,247,0.25)')}
-      onMouseLeave={e => e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'}
-    >
-      {/* Top row */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14, gap: 12 }}>
-        <div style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.45, flex: 1 }}>
-          {market.question}
+      borderBottom: '1px solid #2a2a2a',
+      padding: '20px 0',
+      opacity: isSettled ? 0.55 : 1,
+    }}>
+      {/* Meta row */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+        <div style={{ fontSize: 11, color: '#666', textTransform: 'uppercase', letterSpacing: 1, fontWeight: 600 }}>
+          {isSettled ? `Settled — ${market.result?.toUpperCase()} won` : isOpen ? 'Open' : 'Awaiting result'}
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flexShrink: 0 }}>
-          {remaining && isOpen && (
-            <span style={{ fontSize: 11, color: '#9ca3af', background: 'rgba(255,255,255,0.05)', borderRadius: 6, padding: '2px 8px' }}>
-              ⏱ {remaining}
-            </span>
-          )}
-          {isSettled && (
-            <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 8, background: market.result === 'yes' ? 'rgba(16,185,129,0.15)' : 'rgba(239,68,68,0.15)', color: market.result === 'yes' ? '#10b981' : '#ef4444' }}>
-              {market.result?.toUpperCase()} won ✓
-            </span>
-          )}
-          {market.status === 'closed' && (
-            <span style={{ fontSize: 11, color: '#f59e0b', background: 'rgba(245,158,11,0.1)', padding: '2px 8px', borderRadius: 6 }}>
-              Awaiting result
-            </span>
-          )}
-        </div>
+        {remaining && isOpen && (
+          <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: 0.5 }}>{remaining}</div>
+        )}
+      </div>
+
+      {/* Question */}
+      <div style={{ fontSize: 20, fontWeight: 800, lineHeight: 1.3, marginBottom: 14, letterSpacing: -0.3 }}>
+        {market.question}
       </div>
 
       {/* Progress bar */}
-      <div style={{ position: 'relative', height: 6, borderRadius: 99, background: 'rgba(239,68,68,0.25)', marginBottom: 14, overflow: 'hidden' }}>
-        <div style={{
-          position: 'absolute', left: 0, top: 0, bottom: 0,
-          width: `${yesPct}%`,
-          background: 'linear-gradient(90deg, #10b981, #059669)',
-          borderRadius: 99, transition: 'width 0.5s cubic-bezier(0.4,0,0.2,1)',
-        }} />
+      <div style={{ marginBottom: 14 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5, fontSize: 13, fontWeight: 700 }}>
+          <span style={{ color: '#4caf50' }}>YES {yesPct}%</span>
+          <span style={{ color: '#e63946' }}>NO {noPct}%</span>
+        </div>
+        <div style={{ height: 8, background: '#1e1e1e', position: 'relative', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: `${yesPct}%`, background: '#4caf50', transition: 'width 0.4s ease' }} />
+        </div>
       </div>
 
-      {/* YES/NO buttons */}
+      {/* Bet buttons */}
       {isOpen && (
-        <div style={{ display: 'flex', gap: 10 }}>
+        <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={() => onBet(market, 'yes')} style={{
-            flex: 1, padding: '11px 0', borderRadius: 12,
-            background: 'rgba(16,185,129,0.12)', border: '1px solid rgba(16,185,129,0.25)',
-            color: '#10b981', fontSize: 13, fontWeight: 700,
-            transition: 'all 0.15s',
+            flex: 1, padding: '11px 0', fontSize: 13, fontWeight: 800,
+            textTransform: 'uppercase', letterSpacing: 0.5,
+            background: 'none', border: '2px solid #4caf50', color: '#4caf50',
+            transition: 'all 0.1s',
           }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(16,185,129,0.2)'; e.currentTarget.style.transform = 'scale(1.02)' }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(16,185,129,0.12)'; e.currentTarget.style.transform = 'scale(1)' }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#4caf50'; e.currentTarget.style.color = '#0c0c0c' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#4caf50' }}
           >
-            <span style={{ display: 'block', fontSize: 20, marginBottom: 1 }}>{yesPct}%</span>
-            <span style={{ opacity: 0.7, fontWeight: 500 }}>Yes 👍</span>
+            Bet Yes
           </button>
           <button onClick={() => onBet(market, 'no')} style={{
-            flex: 1, padding: '11px 0', borderRadius: 12,
-            background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.25)',
-            color: '#ef4444', fontSize: 13, fontWeight: 700,
-            transition: 'all 0.15s',
+            flex: 1, padding: '11px 0', fontSize: 13, fontWeight: 800,
+            textTransform: 'uppercase', letterSpacing: 0.5,
+            background: 'none', border: '2px solid #e63946', color: '#e63946',
+            transition: 'all 0.1s',
           }}
-            onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.2)'; e.currentTarget.style.transform = 'scale(1.02)' }}
-            onMouseLeave={e => { e.currentTarget.style.background = 'rgba(239,68,68,0.12)'; e.currentTarget.style.transform = 'scale(1)' }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#e63946'; e.currentTarget.style.color = '#0c0c0c' }}
+            onMouseLeave={e => { e.currentTarget.style.background = 'none'; e.currentTarget.style.color = '#e63946' }}
           >
-            <span style={{ display: 'block', fontSize: 20, marginBottom: 1 }}>{noPct}%</span>
-            <span style={{ opacity: 0.7, fontWeight: 500 }}>No 👎</span>
+            Bet No
           </button>
         </div>
-      )}
-
-      {!isOpen && !isSettled && (
-        <div style={{ fontSize: 13, color: '#6b7280', textAlign: 'center', padding: '8px 0' }}>Market closed — waiting for resolution</div>
       )}
 
       {/* Resolve */}
       {showResolve && market.status === 'closed' && (
-        <div style={{ marginTop: 14, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-          <div style={{ fontSize: 12, color: '#9ca3af', marginBottom: 8, textAlign: 'center' }}>Who won? 🏆</div>
+        <div style={{ marginTop: 12 }}>
+          <div style={{ fontSize: 11, color: '#666', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Mark result</div>
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={() => onResolve(market.id, 'yes')} style={{ flex: 1, padding: '9px 0', borderRadius: 10, background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)', color: '#10b981', fontSize: 13, fontWeight: 700 }}>
-              ✅ Yes won
+            <button onClick={() => onResolve(market.id, 'yes')} style={{ flex: 1, padding: '9px 0', fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.5, background: '#4caf50', color: '#0c0c0c', border: 'none' }}>
+              Yes won
             </button>
-            <button onClick={() => onResolve(market.id, 'no')} style={{ flex: 1, padding: '9px 0', borderRadius: 10, background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.2)', color: '#ef4444', fontSize: 13, fontWeight: 700 }}>
-              ❌ No won
+            <button onClick={() => onResolve(market.id, 'no')} style={{ flex: 1, padding: '9px 0', fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.5, background: '#e63946', color: '#0c0c0c', border: 'none' }}>
+              No won
             </button>
           </div>
         </div>
