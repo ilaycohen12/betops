@@ -93,16 +93,6 @@ module "api_gateway" {
   tags                 = local.tags
 }
 
-# --- NAT route: private subnets → Tailscale EC2 → internet ---
-# Replaces VPC endpoints (saves ~$14/month). Lambda reaches SQS and
-# Secrets Manager via the Tailscale instance acting as a NAT.
-resource "aws_route" "private_nat" {
-  route_table_id         = module.vpc.private_route_table_id
-  destination_cidr_block = "0.0.0.0/0"
-  network_interface_id   = module.tailscale.primary_network_interface_id
-  depends_on             = [module.tailscale]
-}
-
 # --- Frontend ---
 
 module "frontend" {

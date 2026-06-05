@@ -144,7 +144,6 @@ jobs:
         working-directory: terraform/envs/${{ needs.set-env.outputs.tf_env }}
         run: |
           terraform import module.lambda.aws_iam_role.lambda_exec ${{ needs.set-env.outputs.tf_env == 'prod' && 'betops-lambda-exec' || 'betops-dev-lambda-exec' }} || true
-          terraform import aws_route.private_nat "rtb-049f55b74c23570dd_0.0.0.0/0" || true
 
       - name: Terraform Apply
         working-directory: terraform/envs/${{ needs.set-env.outputs.tf_env }}

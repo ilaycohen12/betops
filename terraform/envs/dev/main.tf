@@ -106,9 +106,3 @@ module "tailscale" {
   tags               = local.tags
 }
 
-resource "aws_route" "private_nat" {
-  route_table_id         = module.vpc.private_route_table_id
-  destination_cidr_block = "0.0.0.0/0"
-  network_interface_id   = module.tailscale.primary_network_interface_id
-  depends_on             = [module.tailscale]
-}
