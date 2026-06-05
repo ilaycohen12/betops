@@ -143,6 +143,10 @@ jobs:
         working-directory: terraform/envs/${{ needs.set-env.outputs.tf_env }}
         run: |
           terraform import module.lambda.aws_iam_role.lambda_exec ${{ needs.set-env.outputs.tf_env == 'prod' && 'betops-lambda-exec' || 'betops-dev-lambda-exec' }} || true
+          RT_ID=$(terraform output -raw private_route_table_id 2>/dev/null || echo "")
+          if [ -n "$RT_ID" ]; then
+            terraform import aws_route.private_nat "${RT_ID}_0.0.0.0/0" || true
+          fi
 
       - name: Terraform Apply
         working-directory: terraform/envs/${{ needs.set-env.outputs.tf_env }}
