@@ -143,8 +143,11 @@ jobs:
         working-directory: terraform/envs/${{ needs.set-env.outputs.tf_env }}
         run: |
           terraform import module.lambda.aws_iam_role.lambda_exec ${{ needs.set-env.outputs.tf_env == 'prod' && 'betops-lambda-exec' || 'betops-dev-lambda-exec' }} || true
-          RT_ID=$(terraform output -raw private_route_table_id 2>/dev/null || echo "")
-          if [ -n "$RT_ID" ]; then
+          ENV=${{ needs.set-env.outputs.tf_env }}
+          RT_ID=$(aws ec2 describe-route-tables \
+            --filters "Name=tag:Name,Values=betops-private-rt" \
+            --query 'RouteTables[0].RouteTableId' --output text 2>/dev/null || echo "")
+          if [ -n "$RT_ID" ] && [ "$RT_ID" != "None" ]; then
             terraform import aws_route.private_nat "${RT_ID}_0.0.0.0/0" || true
           fi
 
