@@ -93,6 +93,14 @@ module "api_gateway" {
   tags                 = local.tags
 }
 
+# --- Frontend ---
+
+module "frontend" {
+  source  = "../../modules/frontend"
+  project = var.project
+  tags    = local.tags
+}
+
 # --- Tailscale ---
 
 module "tailscale" {

@@ -35,7 +35,12 @@ def _get_sqs():
 def _resp(status, body):
     return {
         "statusCode": status,
-        "headers": {"Content-Type": "application/json"},
+        "headers": {
+            "Content-Type": "application/json",
+            "Access-Control-Allow-Origin": "*",
+            "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type",
+        },
         "body": json.dumps(body, default=str),
     }
 
@@ -213,6 +218,9 @@ def lambda_handler(event, context):
     else:
         method = event.get("httpMethod", "GET")
         path = event.get("path", "/")
+
+    if method == "OPTIONS":
+        return _resp(200, {})
 
     if path == "/health":
         return _resp(200, {"status": "ok"})
