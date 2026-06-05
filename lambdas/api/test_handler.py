@@ -93,14 +93,18 @@ def test_post_bet_success(mock_db, mock_sqs, ctx):
     assert body["amount"] == 50.0
 
 
-def test_post_bet_missing_field(ctx):
+@patch("handler._get_db_conn")
+def test_post_bet_missing_field(mock_db, ctx):
+    mock_db.return_value = _mock_conn()
     from handler import lambda_handler
     resp = lambda_handler(_event("POST", "/bets", {"user_id": "x"}), ctx)
     assert resp["statusCode"] == 400
     assert "missing field" in json.loads(resp["body"])["error"]
 
 
-def test_post_bet_invalid_side(ctx):
+@patch("handler._get_db_conn")
+def test_post_bet_invalid_side(mock_db, ctx):
+    mock_db.return_value = _mock_conn()
     from handler import lambda_handler
     resp = lambda_handler(_event("POST", "/bets", {
         "user_id": "u", "market_id": "m", "side": "maybe", "amount": 10
@@ -131,7 +135,9 @@ def test_post_bet_user_not_found(mock_db, ctx):
 
 # ── 404 ────────────────────────────────────────────────────────────────────
 
-def test_unknown_route(ctx):
+@patch("handler._get_db_conn")
+def test_unknown_route(mock_db, ctx):
+    mock_db.return_value = _mock_conn()
     from handler import lambda_handler
     resp = lambda_handler(_event("GET", "/unknown"), ctx)
     assert resp["statusCode"] == 404
