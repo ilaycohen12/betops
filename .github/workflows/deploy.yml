@@ -117,7 +117,7 @@ jobs:
     name: Terraform Apply (${{ needs.set-env.outputs.tf_env }})
     runs-on: ubuntu-latest
     needs: [set-env, plan]
-    if: github.event_name == 'push'
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -144,13 +144,7 @@ jobs:
         working-directory: terraform/envs/${{ needs.set-env.outputs.tf_env }}
         run: |
           terraform import module.lambda.aws_iam_role.lambda_exec ${{ needs.set-env.outputs.tf_env == 'prod' && 'betops-lambda-exec' || 'betops-dev-lambda-exec' }} || true
-          ENV=${{ needs.set-env.outputs.tf_env }}
-          RT_ID=$(aws ec2 describe-route-tables \
-            --filters "Name=tag:Name,Values=betops-private-rt" \
-            --query 'RouteTables[0].RouteTableId' --output text 2>/dev/null || echo "")
-          if [ -n "$RT_ID" ] && [ "$RT_ID" != "None" ]; then
-            terraform import aws_route.private_nat "${RT_ID}_0.0.0.0/0" || true
-          fi
+          terraform import aws_route.private_nat "rtb-049f55b74c23570dd_0.0.0.0/0" || true
 
       - name: Terraform Apply
         working-directory: terraform/envs/${{ needs.set-env.outputs.tf_env }}
