@@ -13,8 +13,8 @@ variable "public_subnet_id" {
   type        = string
 }
 
-variable "vpc_cidr" {
-  description = "VPC CIDR to advertise to Tailscale (e.g. 10.0.0.0/16)"
+variable "advertise_routes" {
+  description = "Comma-separated CIDRs to advertise (use private subnets only to avoid homelab conflicts)"
   type        = string
 }
 

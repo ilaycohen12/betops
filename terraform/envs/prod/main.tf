@@ -106,10 +106,10 @@ module "frontend" {
 module "tailscale" {
   source = "../../modules/tailscale"
 
-  project            = var.project
-  vpc_id             = module.vpc.vpc_id
-  public_subnet_id   = module.vpc.public_subnet_id
-  vpc_cidr           = var.vpc_cidr
+  project          = var.project
+  vpc_id           = module.vpc.vpc_id
+  public_subnet_id = module.vpc.public_subnet_id
+  advertise_routes = "${var.private_subnet_cidr},${var.private_subnet_b_cidr}"
   tailscale_auth_key = var.tailscale_auth_key
-  tags               = local.tags
+  tags             = local.tags
 }

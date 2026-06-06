@@ -94,10 +94,10 @@ resource "aws_instance" "tailscale" {
     # Install Tailscale
     curl -fsSL https://tailscale.com/install.sh | sh
 
-    # Authenticate and advertise the VPC subnet
+    # Authenticate and advertise only private subnets (avoids homelab IP conflicts)
     tailscale up \
       --authkey="${var.tailscale_auth_key}" \
-      --advertise-routes="${var.vpc_cidr}" \
+      --advertise-routes="${var.advertise_routes}" \
       --accept-routes
   EOF
 
