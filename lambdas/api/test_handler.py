@@ -21,7 +21,7 @@ def _event(method, path, body=None):
 
 _SKIP = object()
 
-def _mock_conn(markets=_SKIP, user=_SKIP, market=_SKIP, bet=_SKIP, odds=_SKIP):
+def _mock_conn(markets=_SKIP, user=_SKIP, market=_SKIP, bet=_SKIP):
     """Build a mock psycopg2 connection with configurable query results."""
     conn = MagicMock()
     cur = MagicMock()
@@ -30,8 +30,8 @@ def _mock_conn(markets=_SKIP, user=_SKIP, market=_SKIP, bet=_SKIP, odds=_SKIP):
 
     if markets is not _SKIP:
         cur.fetchall.return_value = markets
-    if user is not _SKIP or market is not _SKIP or bet is not _SKIP or odds is not _SKIP:
-        fetchone_results = [v for v in (user, market, bet, odds) if v is not _SKIP]
+    if user is not _SKIP or market is not _SKIP or bet is not _SKIP:
+        fetchone_results = [v for v in (user, market, bet) if v is not _SKIP]
         cur.fetchone.side_effect = fetchone_results
 
     return conn
@@ -81,7 +81,6 @@ def test_post_bet_success(mock_db, mock_sqs, ctx):
         user={"balance": 500.0},
         market={"id": "mkt-1", "yes_price": 0.6, "status": "open"},
         bet={"id": "bet-1", "created_at": "2026-01-01"},
-        odds={"q_yes": 50.0, "q_no": 0.0},
     )
     mock_sqs.return_value = MagicMock()
     from handler import lambda_handler

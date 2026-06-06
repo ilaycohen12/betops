@@ -1,5 +1,4 @@
 import json
-import math
 import os
 import random
 import string
@@ -7,32 +6,6 @@ import string
 import boto3
 import psycopg2
 import psycopg2.extras
-
-LMSR_B = float(os.environ.get("LMSR_B", "100"))
-
-
-def _lmsr_price(q_yes: float, q_no: float) -> float:
-    try:
-        e_yes = math.exp(q_yes / LMSR_B)
-        e_no = math.exp(q_no / LMSR_B)
-        return e_yes / (e_yes + e_no)
-    except OverflowError:
-        return 1.0 if q_yes > q_no else 0.0
-
-
-def _update_odds(cur, market_id):
-    cur.execute("""
-        SELECT
-            COALESCE(SUM(amount) FILTER (WHERE side = 'yes'), 0) AS q_yes,
-            COALESCE(SUM(amount) FILTER (WHERE side = 'no'),  0) AS q_no
-        FROM bets WHERE market_id = %s
-    """, (market_id,))
-    row = cur.fetchone()
-    yes_price = _lmsr_price(float(row["q_yes"]), float(row["q_no"]))
-    cur.execute(
-        "UPDATE markets SET yes_price = %s WHERE id = %s AND status = 'open'",
-        (round(yes_price, 4), market_id),
-    )
 
 
 def _get_db_conn():
@@ -286,7 +259,6 @@ def _post_bet(conn, raw_body):
             INSERT INTO transactions (user_id, amount, type, reference_id)
             VALUES (%s, %s, 'bet_placed', %s)
         """, (data["user_id"], -amount, data["market_id"]))
-        _update_odds(cur, data["market_id"])
         conn.commit()
 
     queue_url = os.environ.get("SQS_QUEUE_URL", "")
