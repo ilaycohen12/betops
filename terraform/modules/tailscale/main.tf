@@ -103,3 +103,14 @@ resource "aws_instance" "tailscale" {
 
   tags = merge(var.tags, { Name = "${var.project}-tailscale-router" })
 }
+
+# Allow Tailscale EC2 to reach RDS on port 5432
+resource "aws_security_group_rule" "tailscale_to_rds" {
+  type                     = "ingress"
+  from_port                = 5432
+  to_port                  = 5432
+  protocol                 = "tcp"
+  security_group_id        = var.rds_sg_id
+  source_security_group_id = aws_security_group.tailscale.id
+  description              = "Allow Tailscale subnet router to reach Postgres"
+}

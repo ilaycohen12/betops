@@ -24,6 +24,11 @@ variable "tailscale_auth_key" {
   sensitive   = true
 }
 
+variable "rds_sg_id" {
+  description = "RDS security group ID — Tailscale EC2 will be granted port 5432 access"
+  type        = string
+}
+
 variable "tags" {
   description = "Tags to apply to all resources"
   type        = map(string)
