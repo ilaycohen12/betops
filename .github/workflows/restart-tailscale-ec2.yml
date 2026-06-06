@@ -1,0 +1,42 @@
+name: Restart Tailscale EC2
+
+on:
+  workflow_dispatch:
+
+env:
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_DEFAULT_REGION: us-east-1
+  INSTANCE_ID: i-0a16e49ac8a3b9b20
+
+jobs:
+  restart:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check instance state
+        run: |
+          STATE=$(aws ec2 describe-instances --instance-ids $INSTANCE_ID \
+            --query "Reservations[0].Instances[0].State.Name" --output text)
+          echo "Current state: $STATE"
+          echo "STATE=$STATE" >> $GITHUB_ENV
+
+      - name: Start instance if stopped
+        if: env.STATE == 'stopped'
+        run: |
+          echo "Starting instance..."
+          aws ec2 start-instances --instance-ids $INSTANCE_ID
+          aws ec2 wait instance-running --instance-ids $INSTANCE_ID
+          echo "Instance is running"
+
+      - name: Reboot instance if running
+        if: env.STATE == 'running'
+        run: |
+          echo "Rebooting instance..."
+          aws ec2 reboot-instances --instance-ids $INSTANCE_ID
+          sleep 30
+
+      - name: Wait and show instance status
+        run: |
+          aws ec2 wait instance-status-ok --instance-ids $INSTANCE_ID
+          aws ec2 describe-instance-status --instance-ids $INSTANCE_ID \
+            --query "InstanceStatuses[0].{State:InstanceState.Name,Status:InstanceStatus.Status,SystemStatus:SystemStatus.Status}"
