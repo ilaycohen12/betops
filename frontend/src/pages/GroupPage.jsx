@@ -18,12 +18,16 @@ export default function GroupPage({ user, groupId, onBack }) {
   const [working, setWorking] = useState(false)
   const [tab, setTab] = useState('markets')
 
-  const load = useCallback(() => {
-    setLoading(true)
+  const load = useCallback((silent = false) => {
+    if (!silent) setLoading(true)
     fetchGroup(groupId, user.id).then(setGroup).finally(() => setLoading(false))
   }, [groupId, user.id])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => {
+    load()
+    const interval = setInterval(() => load(true), 10000)
+    return () => clearInterval(interval)
+  }, [load])
 
   const myBalance = group?.members?.find(m => m.id === user.id)?.balance ?? 0
 
