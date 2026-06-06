@@ -26,3 +26,8 @@ output "tailscale_instance_id" {
 output "private_route_table_id" {
   value = module.vpc.private_route_table_id
 }
+
+output "cloudfront_url" {
+  description = "Public URL of the frontend"
+  value       = module.frontend.cloudfront_url
+}
