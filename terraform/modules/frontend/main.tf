@@ -41,7 +41,12 @@ resource "aws_cloudfront_distribution" "frontend" {
     }
   }
 
-  # SPA routing — serve index.html for all 404s
+  # SPA routing — private S3 returns 403 for missing paths, not 404
+  custom_error_response {
+    error_code         = 403
+    response_code      = 200
+    response_page_path = "/index.html"
+  }
   custom_error_response {
     error_code         = 404
     response_code      = 200
