@@ -17,10 +17,14 @@ export default function GroupPage({ user, groupId, onBack }) {
   const [newMarket, setNewMarket] = useState({ question: '', closes_at: '' })
   const [working, setWorking] = useState(false)
   const [tab, setTab] = useState('markets')
+  const [error, setError] = useState(null)
 
   const load = useCallback((silent = false) => {
     if (!silent) setLoading(true)
-    fetchGroup(groupId, user.id).then(setGroup).finally(() => setLoading(false))
+    fetchGroup(groupId, user.id)
+      .then(data => { setGroup(data); setError(null) })
+      .catch(e => { if (!silent) setError(e.message) })
+      .finally(() => setLoading(false))
   }, [groupId, user.id])
 
   useEffect(() => {
@@ -59,6 +63,14 @@ export default function GroupPage({ user, groupId, onBack }) {
   if (loading && !group) return (
     <div><Header user={user} onBack={onBack} />
       <div style={{ textAlign: 'center', padding: 60, color: '#555', fontSize: 13, textTransform: 'uppercase', letterSpacing: 1 }}>Loading...</div>
+    </div>
+  )
+  if (error && !group) return (
+    <div><Header user={user} onBack={onBack} />
+      <div style={{ textAlign: 'center', padding: 60 }}>
+        <div style={{ color: '#e63946', fontSize: 13, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>Failed to load</div>
+        <div style={{ color: '#555', fontSize: 13 }}>{error}</div>
+      </div>
     </div>
   )
   if (!group) return null
