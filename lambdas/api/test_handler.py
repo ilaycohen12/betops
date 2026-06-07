@@ -1,6 +1,10 @@
 import json
+import jwt
 import pytest
 from unittest.mock import MagicMock, patch
+
+TEST_USER_ID = "00000000-0000-0000-0000-000000000001"
+JWT_SECRET = "dev-secret-change-in-prod"
 
 
 @pytest.fixture
@@ -11,29 +15,32 @@ def ctx():
     return MockContext()
 
 
-def _event(method, path, body=None):
+def _token(user_id=TEST_USER_ID):
+    return jwt.encode({"user_id": user_id, "exp": 9999999999}, JWT_SECRET, algorithm="HS256")
+
+
+def _event(method, path, body=None, auth=True):
+    headers = {"authorization": f"Bearer {_token()}"} if auth else {}
     return {
         "requestContext": {"http": {"method": method, "path": path}},
         "rawPath": path,
         "body": json.dumps(body) if body else None,
+        "headers": headers,
     }
 
 
 _SKIP = object()
 
 def _mock_conn(markets=_SKIP, user=_SKIP, market=_SKIP, bet=_SKIP):
-    """Build a mock psycopg2 connection with configurable query results."""
     conn = MagicMock()
     cur = MagicMock()
     conn.cursor.return_value.__enter__ = MagicMock(return_value=cur)
     conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
-
     if markets is not _SKIP:
         cur.fetchall.return_value = markets
     if user is not _SKIP or market is not _SKIP or bet is not _SKIP:
         fetchone_results = [v for v in (user, market, bet) if v is not _SKIP]
         cur.fetchone.side_effect = fetchone_results
-
     return conn
 
 
@@ -41,9 +48,64 @@ def _mock_conn(markets=_SKIP, user=_SKIP, market=_SKIP, bet=_SKIP):
 
 def test_health_check(ctx):
     from handler import lambda_handler
-    resp = lambda_handler(_event("GET", "/health"), ctx)
+    resp = lambda_handler(_event("GET", "/health", auth=False), ctx)
     assert resp["statusCode"] == 200
     assert json.loads(resp["body"])["status"] == "ok"
+
+
+# ── Auth ───────────────────────────────────────────────────────────────────
+
+@patch("handler._get_db_conn")
+def test_register_success(mock_db, ctx):
+    cur = MagicMock()
+    cur.fetchone.side_effect = [None, {
+        "id": TEST_USER_ID, "username": "johndoe", "email": "john@example.com",
+        "first_name": "John", "last_name": "Doe", "nickname": "jd",
+        "balance": 500.0, "created_at": "2026-01-01",
+    }]
+    conn = MagicMock()
+    conn.cursor.return_value.__enter__ = MagicMock(return_value=cur)
+    conn.cursor.return_value.__exit__ = MagicMock(return_value=False)
+    mock_db.return_value = conn
+
+    from handler import lambda_handler
+    resp = lambda_handler(_event("POST", "/auth/register", {
+        "username": "johndoe", "email": "john@example.com", "password": "secret",
+        "first_name": "John", "last_name": "Doe", "nickname": "jd",
+    }, auth=False), ctx)
+    assert resp["statusCode"] == 201
+    body = json.loads(resp["body"])
+    assert "token" in body
+    assert body["user"]["username"] == "johndoe"
+
+
+@patch("handler._get_db_conn")
+def test_register_missing_field(mock_db, ctx):
+    mock_db.return_value = _mock_conn()
+    from handler import lambda_handler
+    resp = lambda_handler(_event("POST", "/auth/register", {
+        "username": "johndoe", "password": "secret",
+    }, auth=False), ctx)
+    assert resp["statusCode"] == 400
+    assert "missing field" in json.loads(resp["body"])["error"]
+
+
+@patch("handler._get_db_conn")
+def test_login_invalid_credentials(mock_db, ctx):
+    mock_db.return_value = _mock_conn(user=None)
+    from handler import lambda_handler
+    resp = lambda_handler(_event("POST", "/auth/login", {
+        "username": "johndoe", "password": "wrong",
+    }, auth=False), ctx)
+    assert resp["statusCode"] == 401
+
+
+# ── No token → 401 ─────────────────────────────────────────────────────────
+
+def test_no_token_returns_401(ctx):
+    from handler import lambda_handler
+    resp = lambda_handler(_event("GET", "/markets", auth=False), ctx)
+    assert resp["statusCode"] == 401
 
 
 # ── GET /markets ────────────────────────────────────────────────────────────
@@ -85,7 +147,7 @@ def test_post_bet_success(mock_db, mock_sqs, ctx):
     mock_sqs.return_value = MagicMock()
     from handler import lambda_handler
     resp = lambda_handler(_event("POST", "/bets", {
-        "user_id": "usr-1", "market_id": "mkt-1", "side": "yes", "amount": 50
+        "market_id": "mkt-1", "side": "yes", "amount": 50
     }), ctx)
     assert resp["statusCode"] == 201
     body = json.loads(resp["body"])
@@ -97,7 +159,7 @@ def test_post_bet_success(mock_db, mock_sqs, ctx):
 def test_post_bet_missing_field(mock_db, ctx):
     mock_db.return_value = _mock_conn()
     from handler import lambda_handler
-    resp = lambda_handler(_event("POST", "/bets", {"user_id": "x"}), ctx)
+    resp = lambda_handler(_event("POST", "/bets", {"side": "yes"}), ctx)
     assert resp["statusCode"] == 400
     assert "missing field" in json.loads(resp["body"])["error"]
 
@@ -107,7 +169,7 @@ def test_post_bet_invalid_side(mock_db, ctx):
     mock_db.return_value = _mock_conn()
     from handler import lambda_handler
     resp = lambda_handler(_event("POST", "/bets", {
-        "user_id": "u", "market_id": "m", "side": "maybe", "amount": 10
+        "market_id": "m", "side": "maybe", "amount": 10
     }), ctx)
     assert resp["statusCode"] == 400
 
@@ -117,7 +179,7 @@ def test_post_bet_insufficient_balance(mock_db, ctx):
     mock_db.return_value = _mock_conn(user={"balance": 5.0})
     from handler import lambda_handler
     resp = lambda_handler(_event("POST", "/bets", {
-        "user_id": "u", "market_id": "m", "side": "yes", "amount": 100
+        "market_id": "m", "side": "yes", "amount": 100
     }), ctx)
     assert resp["statusCode"] == 400
     assert "insufficient" in json.loads(resp["body"])["error"]
@@ -128,7 +190,7 @@ def test_post_bet_user_not_found(mock_db, ctx):
     mock_db.return_value = _mock_conn(user=None)
     from handler import lambda_handler
     resp = lambda_handler(_event("POST", "/bets", {
-        "user_id": "u", "market_id": "m", "side": "yes", "amount": 10
+        "market_id": "m", "side": "yes", "amount": 10
     }), ctx)
     assert resp["statusCode"] == 404
 
