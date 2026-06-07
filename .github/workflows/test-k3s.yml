@@ -25,3 +25,5 @@ jobs:
           kubectl get pods -A
           echo "---"
           kubectl describe pod -n betops -l app=betops-worker 2>/dev/null || echo "no worker pod found"
+          echo "--- WORKER LOGS (last 80 lines) ---"
+          kubectl logs -n betops -l app=betops-worker --tail=80 2>/dev/null || echo "no worker logs"
