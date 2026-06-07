@@ -85,7 +85,8 @@ resource "aws_instance" "tailscale" {
 
     # NAT: masquerade outbound traffic from private subnets to the internet
     # This replaces VPC endpoints — Lambda can reach SQS and Secrets Manager via this instance
-    iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
+    IFACE=$(ip route show default | awk '/default/ {print $5; exit}')
+    iptables -t nat -A POSTROUTING -o "$IFACE" -j MASQUERADE
     # Persist iptables rules across reboots
     yum install -y iptables-services
     service iptables save

@@ -27,3 +27,16 @@ jobs:
           kubectl describe pod -n betops -l app=betops-worker 2>/dev/null || echo "no worker pod found"
           echo "--- WORKER LOGS (last 80 lines) ---"
           kubectl logs -n betops -l app=betops-worker --tail=80 2>/dev/null || echo "no worker logs"
+
+      - name: Test RDS reachability from runner (via Tailscale)
+        run: |
+          echo "Testing from GitHub Actions runner (uses Tailscale --accept-routes)..."
+          nc -zv 10.0.3.228 5432 && echo "RUNNER → RDS: REACHABLE" || echo "RUNNER → RDS: UNREACHABLE"
+
+      - name: Test RDS reachability from cluster pod
+        run: |
+          echo "Testing from inside a k3s pod (uses homelab Tailscale routes)..."
+          kubectl run rds-test --image=busybox --restart=Never --rm -i \
+            --timeout=30s \
+            -- sh -c "nc -zv 10.0.3.228 5432 && echo 'POD → RDS: REACHABLE' || echo 'POD → RDS: UNREACHABLE'" \
+            2>/dev/null || echo "connectivity test timed out or failed"
