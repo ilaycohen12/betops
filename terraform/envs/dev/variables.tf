@@ -41,3 +41,9 @@ variable "tailscale_auth_key" {
   type        = string
   sensitive   = true
 }
+
+variable "jwt_secret" {
+  description = "Secret key for signing JWT tokens — set via TF_VAR_jwt_secret or GitHub secret"
+  type        = string
+  sensitive   = true
+}

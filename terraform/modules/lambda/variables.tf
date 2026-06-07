@@ -33,6 +33,12 @@ variable "lambda_sg_id" {
   type        = string
 }
 
+variable "jwt_secret" {
+  description = "Secret key for signing JWT tokens"
+  type        = string
+  sensitive   = true
+}
+
 variable "tags" {
   description = "Tags to apply to all resources"
   type        = map(string)

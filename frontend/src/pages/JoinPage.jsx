@@ -5,7 +5,7 @@ export default function JoinPage({ user, code, onDone }) {
   const [status, setStatus] = useState('joining')
 
   useEffect(() => {
-    joinGroup(code, user.id)
+    joinGroup(code)
       .then(g => onDone(g.group_id))
       .catch(e => setStatus(e.message))
   }, [])

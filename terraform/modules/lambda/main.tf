@@ -85,6 +85,7 @@ resource "aws_lambda_function" "api" {
     variables = {
       DB_SECRET_ARN = var.db_secret_arn
       SQS_QUEUE_URL = var.sqs_queue_url
+      JWT_SECRET    = var.jwt_secret
     }
   }
 

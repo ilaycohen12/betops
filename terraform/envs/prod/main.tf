@@ -79,6 +79,7 @@ module "lambda" {
   sqs_queue_url = module.sqs.queue_url
   subnet_ids    = [module.vpc.private_subnet_id, module.vpc.private_subnet_b_id]
   lambda_sg_id  = module.vpc.lambda_sg_id
+  jwt_secret    = var.jwt_secret
   tags          = local.tags
 }
 

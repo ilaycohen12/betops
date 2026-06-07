@@ -3,7 +3,7 @@ import { fetchGroups, createGroup, joinGroup } from '../api'
 import Header from '../components/Header'
 import Modal from '../components/Modal'
 
-export default function HomePage({ user, onEnterGroup }) {
+export default function HomePage({ user, onEnterGroup, onLogout }) {
   const [groups, setGroups] = useState([])
   const [loading, setLoading] = useState(true)
   const [showCreate, setShowCreate] = useState(false)
@@ -13,14 +13,14 @@ export default function HomePage({ user, onEnterGroup }) {
   const [working, setWorking] = useState(false)
   const [error, setError] = useState(null)
 
-  const load = () => fetchGroups(user.id).then(setGroups).catch(() => {}).finally(() => setLoading(false))
+  const load = () => fetchGroups().then(setGroups).catch(() => {}).finally(() => setLoading(false))
   useEffect(() => { load() }, [])
 
   const handleCreate = async () => {
     if (!groupName.trim()) return
     setWorking(true); setError(null)
     try {
-      const g = await createGroup(groupName.trim(), user.id)
+      const g = await createGroup(groupName.trim())
       setShowCreate(false); setGroupName(''); load(); onEnterGroup(g.id)
     } catch (e) { setError(e.message) }
     setWorking(false)
@@ -30,7 +30,7 @@ export default function HomePage({ user, onEnterGroup }) {
     if (!joinCode.trim()) return
     setWorking(true); setError(null)
     try {
-      const g = await joinGroup(joinCode.trim(), user.id)
+      const g = await joinGroup(joinCode.trim())
       setShowJoin(false); setJoinCode(''); load(); onEnterGroup(g.group_id)
     } catch (e) { setError(e.message) }
     setWorking(false)
@@ -38,7 +38,7 @@ export default function HomePage({ user, onEnterGroup }) {
 
   return (
     <div>
-      <Header user={user} />
+      <Header user={user} onLogout={onLogout} />
 
       <main style={{ maxWidth: 800, margin: '0 auto', padding: '32px 24px' }}>
         {/* Section header */}

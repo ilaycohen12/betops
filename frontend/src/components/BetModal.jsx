@@ -19,7 +19,7 @@ export default function BetModal({ market, side, groupId, user, onClose, onDone 
     if (!amount || parseFloat(amount) <= 0) return
     setLoading(true); setError(null)
     try {
-      await placeBet({ market_id: market.id, group_id: groupId, side, amount: parseFloat(amount), user_id: user.id })
+      await placeBet({ market_id: market.id, group_id: groupId, side, amount: parseFloat(amount) })
       onDone(`Bet placed — $${parseFloat(amount).toFixed(0)} on ${side.toUpperCase()}`)
     } catch (e) { setError(e.message); setLoading(false) }
   }

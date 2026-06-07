@@ -1,11 +1,16 @@
+import datetime
 import json
 import os
 import random
 import string
 
+import bcrypt
 import boto3
+import jwt
 import psycopg2
 import psycopg2.extras
+
+JWT_SECRET = os.environ.get("JWT_SECRET", "dev-secret-change-in-prod")
 
 
 def _get_db_conn():
@@ -42,7 +47,7 @@ def _resp(status, body):
             "Content-Type": "application/json",
             "Access-Control-Allow-Origin": "*",
             "Access-Control-Allow-Methods": "GET,POST,OPTIONS",
-            "Access-Control-Allow-Headers": "Content-Type",
+            "Access-Control-Allow-Headers": "Content-Type,Authorization",
         },
         "body": json.dumps(body, default=str),
     }
@@ -57,6 +62,79 @@ def _parse_body(raw):
 
 def _invite_code():
     return "".join(random.choices(string.ascii_uppercase + string.digits, k=6))
+
+
+def _make_token(user_id):
+    payload = {
+        "user_id": user_id,
+        "exp": datetime.datetime.utcnow() + datetime.timedelta(days=7),
+    }
+    return jwt.encode(payload, JWT_SECRET, algorithm="HS256")
+
+
+def _require_auth(event):
+    headers = event.get("headers") or {}
+    header = headers.get("authorization") or headers.get("Authorization", "")
+    if not header.startswith("Bearer "):
+        return None, _resp(401, {"error": "authorization required"})
+    token = header[7:]
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
+        return payload["user_id"], None
+    except jwt.ExpiredSignatureError:
+        return None, _resp(401, {"error": "token expired"})
+    except jwt.InvalidTokenError:
+        return None, _resp(401, {"error": "invalid token"})
+
+
+# ── Auth ──────────────────────────────────────────────────────────────────
+
+def _post_register(conn, body):
+    for f in ("username", "email", "password", "first_name", "last_name"):
+        if f not in body:
+            return _resp(400, {"error": f"missing field: {f}"})
+    pw_hash = bcrypt.hashpw(body["password"].encode(), bcrypt.gensalt()).decode()
+    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+        cur.execute(
+            "SELECT 1 FROM users WHERE username = %s OR email = %s",
+            (body["username"], body["email"]),
+        )
+        if cur.fetchone():
+            return _resp(409, {"error": "username or email already taken"})
+        name = f"{body['first_name']} {body['last_name']}"
+        cur.execute("""
+            INSERT INTO users (username, email, password_hash, first_name, last_name, nickname, name)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            RETURNING id, username, email, first_name, last_name, nickname, balance, created_at
+        """, (
+            body["username"], body["email"], pw_hash,
+            body["first_name"], body["last_name"],
+            body.get("nickname") or None, name,
+        ))
+        user = dict(cur.fetchone())
+        conn.commit()
+    token = _make_token(str(user["id"]))
+    return _resp(201, {"token": token, "user": user})
+
+
+def _post_login(conn, body):
+    for f in ("username", "password"):
+        if f not in body:
+            return _resp(400, {"error": f"missing field: {f}"})
+    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+        cur.execute("""
+            SELECT id, username, email, first_name, last_name, nickname, password_hash, balance
+            FROM users WHERE username = %s
+        """, (body["username"],))
+        user = cur.fetchone()
+    if not user or not user["password_hash"]:
+        return _resp(401, {"error": "invalid credentials"})
+    if not bcrypt.checkpw(body["password"].encode(), user["password_hash"].encode()):
+        return _resp(401, {"error": "invalid credentials"})
+    user = dict(user)
+    user.pop("password_hash")
+    token = _make_token(str(user["id"]))
+    return _resp(200, {"token": token, "user": user})
 
 
 # ── Groups ────────────────────────────────────────────────────────────────
@@ -76,42 +154,40 @@ def _get_groups(conn, user_id):
         return _resp(200, [dict(r) for r in cur.fetchall()])
 
 
-def _post_group(conn, body):
-    for f in ("name", "user_id"):
-        if f not in body:
-            return _resp(400, {"error": f"missing field: {f}"})
+def _post_group(conn, user_id, body):
+    if "name" not in body:
+        return _resp(400, {"error": "missing field: name"})
     code = _invite_code()
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
         cur.execute("""
             INSERT INTO groups (name, invite_code, created_by)
             VALUES (%s, %s, %s) RETURNING id, name, invite_code, created_at
-        """, (body["name"], code, body["user_id"]))
+        """, (body["name"], code, user_id))
         group = cur.fetchone()
         cur.execute("""
             INSERT INTO group_members (group_id, user_id, balance)
             VALUES (%s, %s, 500.00)
-        """, (group["id"], body["user_id"]))
+        """, (group["id"], user_id))
         conn.commit()
     return _resp(201, dict(group))
 
 
-def _post_join(conn, body):
-    for f in ("invite_code", "user_id"):
-        if f not in body:
-            return _resp(400, {"error": f"missing field: {f}"})
+def _post_join(conn, user_id, body):
+    if "invite_code" not in body:
+        return _resp(400, {"error": "missing field: invite_code"})
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
         cur.execute("SELECT id, name FROM groups WHERE invite_code = %s", (body["invite_code"].upper(),))
         group = cur.fetchone()
         if not group:
             return _resp(404, {"error": "group not found"})
         cur.execute("SELECT 1 FROM group_members WHERE group_id = %s AND user_id = %s",
-                    (group["id"], body["user_id"]))
+                    (group["id"], user_id))
         if cur.fetchone():
             return _resp(200, {"message": "already a member", "group_id": str(group["id"])})
         cur.execute("""
             INSERT INTO group_members (group_id, user_id, balance)
             VALUES (%s, %s, 500.00)
-        """, (group["id"], body["user_id"]))
+        """, (group["id"], user_id))
         conn.commit()
     return _resp(201, {"group_id": str(group["id"]), "name": group["name"]})
 
@@ -124,7 +200,7 @@ def _get_group(conn, group_id, user_id):
             return _resp(404, {"error": "group not found"})
 
         cur.execute("""
-            SELECT u.id, u.name, gm.balance, gm.joined_at
+            SELECT u.id, u.name, u.first_name, u.last_name, u.nickname, gm.balance, gm.joined_at
             FROM group_members gm JOIN users u ON u.id = gm.user_id
             WHERE gm.group_id = %s
             ORDER BY gm.balance DESC
@@ -147,13 +223,12 @@ def _get_group(conn, group_id, user_id):
     return _resp(200, result)
 
 
-def _post_group_market(conn, group_id, body):
-    for f in ("question", "user_id"):
-        if f not in body:
-            return _resp(400, {"error": f"missing field: {f}"})
+def _post_group_market(conn, group_id, user_id, body):
+    if "question" not in body:
+        return _resp(400, {"error": "missing field: question"})
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
         cur.execute("SELECT 1 FROM group_members WHERE group_id = %s AND user_id = %s",
-                    (group_id, body["user_id"]))
+                    (group_id, user_id))
         if not cur.fetchone():
             return _resp(403, {"error": "not a member of this group"})
         cur.execute("""
@@ -161,7 +236,7 @@ def _post_group_market(conn, group_id, body):
             VALUES (%s, %s, %s, %s, %s)
             RETURNING id, question, yes_price, status, created_at
         """, (body["question"], body.get("description"), group_id,
-              body["user_id"], body.get("closes_at")))
+              user_id, body.get("closes_at")))
         market = cur.fetchone()
         conn.commit()
     return _resp(201, dict(market))
@@ -199,11 +274,11 @@ def _post_resolve(conn, market_id, body):
 
 # ── Bets ──────────────────────────────────────────────────────────────────
 
-def _post_bet(conn, raw_body):
+def _post_bet(conn, user_id, raw_body):
     data, err = _parse_body(raw_body)
     if err:
         return err
-    for f in ("user_id", "market_id", "side", "amount"):
+    for f in ("market_id", "side", "amount"):
         if f not in data:
             return _resp(400, {"error": f"missing field: {f}"})
     if data["side"] not in ("yes", "no"):
@@ -220,18 +295,18 @@ def _post_bet(conn, raw_body):
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
         if group_id:
             cur.execute("SELECT balance FROM group_members WHERE group_id = %s AND user_id = %s FOR UPDATE",
-                        (group_id, data["user_id"]))
+                        (group_id, user_id))
             member = cur.fetchone()
             if not member:
                 return _resp(403, {"error": "not a member of this group"})
             if float(member["balance"]) < amount:
                 return _resp(400, {"error": "insufficient balance"})
         else:
-            cur.execute("SELECT balance FROM users WHERE id = %s FOR UPDATE", (data["user_id"],))
-            user = cur.fetchone()
-            if not user:
+            cur.execute("SELECT balance FROM users WHERE id = %s FOR UPDATE", (user_id,))
+            user_row = cur.fetchone()
+            if not user_row:
                 return _resp(404, {"error": "user not found"})
-            if float(user["balance"]) < amount:
+            if float(user_row["balance"]) < amount:
                 return _resp(400, {"error": "insufficient balance"})
 
         cur.execute("SELECT id, yes_price, status FROM markets WHERE id = %s", (data["market_id"],))
@@ -246,19 +321,19 @@ def _post_bet(conn, raw_body):
         cur.execute("""
             INSERT INTO bets (user_id, market_id, side, amount, yes_price)
             VALUES (%s, %s, %s, %s, %s) RETURNING id, created_at
-        """, (data["user_id"], data["market_id"], data["side"], amount, yes_price))
+        """, (user_id, data["market_id"], data["side"], amount, yes_price))
         bet = cur.fetchone()
 
         if group_id:
             cur.execute("UPDATE group_members SET balance = balance - %s WHERE group_id = %s AND user_id = %s",
-                        (amount, group_id, data["user_id"]))
+                        (amount, group_id, user_id))
         else:
-            cur.execute("UPDATE users SET balance = balance - %s WHERE id = %s", (amount, data["user_id"]))
+            cur.execute("UPDATE users SET balance = balance - %s WHERE id = %s", (amount, user_id))
 
         cur.execute("""
             INSERT INTO transactions (user_id, amount, type, reference_id)
             VALUES (%s, %s, 'bet_placed', %s)
-        """, (data["user_id"], -amount, data["market_id"]))
+        """, (user_id, -amount, data["market_id"]))
         conn.commit()
 
     queue_url = os.environ.get("SQS_QUEUE_URL", "")
@@ -283,12 +358,12 @@ def _post_bet(conn, raw_body):
     })
 
 
-# ── Migration actions ─────────────────────────────────────────────────────
+# ── Migration schemas ─────────────────────────────────────────────────────
 
 SCHEMA_V1 = """
 CREATE TABLE IF NOT EXISTS users (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    email TEXT NOT NULL UNIQUE, name TEXT NOT NULL,
+    email TEXT NOT NULL UNIQUE, name TEXT NOT NULL DEFAULT '',
     balance NUMERIC(10,2) NOT NULL DEFAULT 500.00,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -342,6 +417,14 @@ CREATE INDEX IF NOT EXISTS markets_group_id_idx ON markets (group_id);
 CREATE INDEX IF NOT EXISTS group_members_user_id_idx ON group_members (user_id);
 """
 
+SCHEMA_V3 = """
+ALTER TABLE users ADD COLUMN IF NOT EXISTS username TEXT UNIQUE;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS password_hash TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS first_name TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS last_name TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS nickname TEXT;
+"""
+
 
 # ── Router ────────────────────────────────────────────────────────────────
 
@@ -352,6 +435,7 @@ def lambda_handler(event, context):
             with conn.cursor() as cur:
                 cur.execute(SCHEMA_V1)
                 cur.execute(SCHEMA_V2)
+                cur.execute(SCHEMA_V3)
             conn.commit()
             conn.close()
             return {"status": "migration complete"}
@@ -394,13 +478,33 @@ def lambda_handler(event, context):
 
     parts = [p for p in path.split("/") if p]
 
+    # ── Public auth routes ────────────────────────────────────────────────
+    if path in ("/auth/register", "/auth/login") and method == "POST":
+        try:
+            conn = _get_db_conn()
+        except Exception as e:
+            return _resp(500, {"error": f"db connection failed: {e}"})
+        try:
+            data, err = _parse_body(event.get("body"))
+            if err:
+                return err
+            if path == "/auth/register":
+                return _post_register(conn, data)
+            return _post_login(conn, data)
+        finally:
+            conn.close()
+
+    # ── All other routes require a valid JWT ──────────────────────────────
+    user_id, auth_err = _require_auth(event)
+    if auth_err:
+        return auth_err
+
     try:
         conn = _get_db_conn()
     except Exception as e:
         return _resp(500, {"error": f"db connection failed: {e}"})
 
     try:
-        # GET /markets (legacy)
         if path == "/markets" and method == "GET":
             with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
                 cur.execute("""
@@ -412,44 +516,37 @@ def lambda_handler(event, context):
                 """)
                 return _resp(200, [dict(r) for r in cur.fetchall()])
 
-        # POST /bets
         if path == "/bets" and method == "POST":
-            return _post_bet(conn, event.get("body"))
+            return _post_bet(conn, user_id, event.get("body"))
 
-        # GET /groups?user_id=xxx
         if path == "/groups" and method == "GET":
-            user_id = event.get("queryStringParameters", {}).get("user_id")
-            if not user_id:
-                return _resp(400, {"error": "missing query param: user_id"})
             return _get_groups(conn, user_id)
 
-        # POST /groups
         if path == "/groups" and method == "POST":
             data, err = _parse_body(event.get("body"))
-            if err: return err
-            return _post_group(conn, data)
+            if err:
+                return err
+            return _post_group(conn, user_id, data)
 
-        # POST /groups/join
         if path == "/groups/join" and method == "POST":
             data, err = _parse_body(event.get("body"))
-            if err: return err
-            return _post_join(conn, data)
+            if err:
+                return err
+            return _post_join(conn, user_id, data)
 
-        # GET /groups/{id}
         if len(parts) == 2 and parts[0] == "groups" and method == "GET":
-            user_id = (event.get("queryStringParameters") or {}).get("user_id")
             return _get_group(conn, parts[1], user_id)
 
-        # POST /groups/{id}/markets
         if len(parts) == 3 and parts[0] == "groups" and parts[2] == "markets" and method == "POST":
             data, err = _parse_body(event.get("body"))
-            if err: return err
-            return _post_group_market(conn, parts[1], data)
+            if err:
+                return err
+            return _post_group_market(conn, parts[1], user_id, data)
 
-        # POST /markets/{id}/resolve
         if len(parts) == 3 and parts[0] == "markets" and parts[2] == "resolve" and method == "POST":
             data, err = _parse_body(event.get("body"))
-            if err: return err
+            if err:
+                return err
             return _post_resolve(conn, parts[1], data)
 
         return _resp(404, {"error": "not found"})

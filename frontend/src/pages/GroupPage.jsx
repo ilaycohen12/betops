@@ -6,7 +6,7 @@ import BetModal from '../components/BetModal'
 import Modal from '../components/Modal'
 import Toast from '../components/Toast'
 
-export default function GroupPage({ user, groupId, onBack }) {
+export default function GroupPage({ user, groupId, onBack, onLogout }) {
   const [group, setGroup] = useState(null)
   const [loading, setLoading] = useState(true)
   const [activeBet, setActiveBet] = useState(null)
@@ -21,11 +21,11 @@ export default function GroupPage({ user, groupId, onBack }) {
 
   const load = useCallback((silent = false) => {
     if (!silent) setLoading(true)
-    fetchGroup(groupId, user.id)
+    fetchGroup(groupId)
       .then(data => { setGroup(data); setError(null) })
       .catch(e => { if (!silent) setError(e.message) })
       .finally(() => setLoading(false))
-  }, [groupId, user.id])
+  }, [groupId])
 
   useEffect(() => {
     load()
@@ -39,7 +39,7 @@ export default function GroupPage({ user, groupId, onBack }) {
     if (!newMarket.question.trim()) return
     setWorking(true)
     try {
-      await createMarket(groupId, { ...newMarket, user_id: user.id })
+      await createMarket(groupId, newMarket)
       setShowCreateMarket(false); setNewMarket({ question: '', closes_at: '' }); load()
       setToast('Market created')
     } catch (e) { setToast(e.message) }
@@ -48,7 +48,7 @@ export default function GroupPage({ user, groupId, onBack }) {
 
   const handleResolve = async (market_id, result) => {
     try {
-      await resolveMarket(market_id, result, user.id)
+      await resolveMarket(market_id, result)
       setToast(`Market resolved — ${result.toUpperCase()} won`)
       load()
     } catch (e) { setToast(e.message) }
@@ -61,12 +61,12 @@ export default function GroupPage({ user, groupId, onBack }) {
   }
 
   if (loading && !group) return (
-    <div><Header user={user} onBack={onBack} />
+    <div><Header user={user} onBack={onBack} onLogout={onLogout} />
       <div style={{ textAlign: 'center', padding: 60, color: '#555', fontSize: 13, textTransform: 'uppercase', letterSpacing: 1 }}>Loading...</div>
     </div>
   )
   if (error && !group) return (
-    <div><Header user={user} onBack={onBack} />
+    <div><Header user={user} onBack={onBack} onLogout={onLogout} />
       <div style={{ textAlign: 'center', padding: 60 }}>
         <div style={{ color: '#e63946', fontSize: 13, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>Failed to load</div>
         <div style={{ color: '#555', fontSize: 13 }}>{error}</div>
@@ -81,7 +81,7 @@ export default function GroupPage({ user, groupId, onBack }) {
 
   return (
     <div>
-      <Header user={user} balance={myBalance} onBack={onBack} />
+      <Header user={user} balance={myBalance} onBack={onBack} onLogout={onLogout} />
 
       <main style={{ maxWidth: 800, margin: '0 auto', padding: '32px 24px' }}>
 
