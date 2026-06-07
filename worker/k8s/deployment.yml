@@ -13,6 +13,8 @@ spec:
       labels:
         app: betops-worker
     spec:
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
       imagePullSecrets:
         - name: ghcr-secret
       containers:
