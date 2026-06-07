@@ -507,6 +507,8 @@ def lambda_handler(event, context):
             if path == "/auth/register":
                 return _post_register(conn, data)
             return _post_login(conn, data)
+        except Exception as e:
+            return _resp(500, {"error": str(e)})
         finally:
             conn.close()
 
