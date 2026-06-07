@@ -284,7 +284,7 @@ def _post_resolve(conn, market_id, body):
         if market["status"] == "settled":
             return _resp(400, {"error": "market already settled"})
 
-        valid_results = _VALID_SIDES.get(market["type"] or "binary", ("yes", "no"))
+        valid_results = _VALID_SIDES.get(market.get("type") or "binary", ("yes", "no"))
         if body["result"] not in valid_results:
             return _resp(400, {"error": f"result must be one of: {', '.join(valid_results)}"})
 
@@ -347,7 +347,7 @@ def _post_bet(conn, user_id, raw_body):
             return _resp(404, {"error": "market not found"})
         if market["status"] != "open":
             return _resp(400, {"error": "market is not open"})
-        valid_sides = _VALID_SIDES.get(market["type"] or "binary", ("yes", "no"))
+        valid_sides = _VALID_SIDES.get(market.get("type") or "binary", ("yes", "no"))
         if data["side"] not in valid_sides:
             return _resp(400, {"error": f"side must be one of: {', '.join(valid_sides)}"})
 
