@@ -1,10 +1,11 @@
 import datetime
+import hashlib
 import json
 import os
 import random
+import secrets
 import string
 
-import bcrypt
 import boto3
 import jwt
 import psycopg2
@@ -89,11 +90,26 @@ def _require_auth(event):
 
 # ── Auth ──────────────────────────────────────────────────────────────────
 
+def _hash_password(password):
+    salt = secrets.token_hex(16)
+    dk = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), 260000)
+    return f"{salt}${dk.hex()}"
+
+
+def _check_password(password, stored):
+    try:
+        salt, dk_hex = stored.split("$")
+        dk = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), 260000)
+        return secrets.compare_digest(dk.hex(), dk_hex)
+    except Exception:
+        return False
+
+
 def _post_register(conn, body):
     for f in ("username", "email", "password", "first_name", "last_name"):
         if f not in body:
             return _resp(400, {"error": f"missing field: {f}"})
-    pw_hash = bcrypt.hashpw(body["password"].encode(), bcrypt.gensalt()).decode()
+    pw_hash = _hash_password(body["password"])
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
         cur.execute(
             "SELECT 1 FROM users WHERE username = %s OR email = %s",
@@ -129,7 +145,7 @@ def _post_login(conn, body):
         user = cur.fetchone()
     if not user or not user["password_hash"]:
         return _resp(401, {"error": "invalid credentials"})
-    if not bcrypt.checkpw(body["password"].encode(), user["password_hash"].encode()):
+    if not _check_password(body["password"], user["password_hash"]):
         return _resp(401, {"error": "invalid credentials"})
     user = dict(user)
     user.pop("password_hash")
