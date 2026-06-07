@@ -14,7 +14,7 @@ spec:
         app: betops-worker
     spec:
       hostNetwork: true
-      dnsPolicy: ClusterFirstWithHostNet
+      dnsPolicy: Default
       nodeSelector:
         kubernetes.io/hostname: master-node
       imagePullSecrets:
