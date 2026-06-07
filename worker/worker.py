@@ -48,8 +48,8 @@ def update_odds(conn, market_id: str):
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
         cur.execute("""
             SELECT
-                COALESCE(SUM(amount) FILTER (WHERE side = 'yes'), 0) AS q_yes,
-                COALESCE(SUM(amount) FILTER (WHERE side = 'no'),  0) AS q_no
+                COALESCE(SUM(amount) FILTER (WHERE side IN ('yes', 'over')), 0) AS q_yes,
+                COALESCE(SUM(amount) FILTER (WHERE side IN ('no', 'under')),  0) AS q_no
             FROM bets WHERE market_id = %s
         """, (market_id,))
         row = cur.fetchone()

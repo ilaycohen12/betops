@@ -227,7 +227,7 @@ def _get_group(conn, group_id, user_id):
             SELECT id, question, description, status, result,
                    yes_price, ROUND(yes_price * 100) AS yes_pct,
                    ROUND((1 - yes_price) * 100) AS no_pct,
-                   closes_at, created_at, created_by
+                   closes_at, created_at, created_by, type, threshold
             FROM markets WHERE group_id = %s
             ORDER BY created_at DESC
         """, (group_id,))
@@ -239,20 +239,34 @@ def _get_group(conn, group_id, user_id):
     return _resp(200, result)
 
 
+_VALID_SIDES = {"binary": ("yes", "no"), "over_under": ("over", "under")}
+
+
 def _post_group_market(conn, group_id, user_id, body):
     if "question" not in body:
         return _resp(400, {"error": "missing field: question"})
+    market_type = body.get("type", "binary")
+    if market_type not in _VALID_SIDES:
+        return _resp(400, {"error": "type must be 'binary' or 'over_under'"})
+    threshold = body.get("threshold")
+    if market_type == "over_under":
+        if threshold is None:
+            return _resp(400, {"error": "threshold is required for over_under markets"})
+        try:
+            threshold = float(threshold)
+        except (TypeError, ValueError):
+            return _resp(400, {"error": "threshold must be a number"})
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
         cur.execute("SELECT 1 FROM group_members WHERE group_id = %s AND user_id = %s",
                     (group_id, user_id))
         if not cur.fetchone():
             return _resp(403, {"error": "not a member of this group"})
         cur.execute("""
-            INSERT INTO markets (question, description, group_id, created_by, closes_at)
-            VALUES (%s, %s, %s, %s, %s)
-            RETURNING id, question, yes_price, status, created_at
+            INSERT INTO markets (question, description, group_id, created_by, closes_at, type, threshold)
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
+            RETURNING id, question, yes_price, status, created_at, type, threshold
         """, (body["question"], body.get("description"), group_id,
-              user_id, body.get("closes_at")))
+              user_id, body.get("closes_at"), market_type, threshold))
         market = cur.fetchone()
         conn.commit()
     return _resp(201, dict(market))
@@ -261,16 +275,18 @@ def _post_group_market(conn, group_id, user_id, body):
 def _post_resolve(conn, market_id, body):
     if "result" not in body:
         return _resp(400, {"error": "missing field: result"})
-    if body["result"] not in ("yes", "no"):
-        return _resp(400, {"error": "result must be 'yes' or 'no'"})
 
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-        cur.execute("SELECT id, group_id, status FROM markets WHERE id = %s", (market_id,))
+        cur.execute("SELECT id, group_id, status, type FROM markets WHERE id = %s", (market_id,))
         market = cur.fetchone()
         if not market:
             return _resp(404, {"error": "market not found"})
         if market["status"] == "settled":
             return _resp(400, {"error": "market already settled"})
+
+        valid_results = _VALID_SIDES.get(market["type"] or "binary", ("yes", "no"))
+        if body["result"] not in valid_results:
+            return _resp(400, {"error": f"result must be one of: {', '.join(valid_results)}"})
 
         cur.execute("UPDATE markets SET status = 'closed' WHERE id = %s", (market_id,))
         conn.commit()
@@ -297,8 +313,8 @@ def _post_bet(conn, user_id, raw_body):
     for f in ("market_id", "side", "amount"):
         if f not in data:
             return _resp(400, {"error": f"missing field: {f}"})
-    if data["side"] not in ("yes", "no"):
-        return _resp(400, {"error": "side must be 'yes' or 'no'"})
+    if data["side"] not in ("yes", "no", "over", "under"):
+        return _resp(400, {"error": "side must be yes, no, over, or under"})
     try:
         amount = float(data["amount"])
     except (TypeError, ValueError):
@@ -325,12 +341,15 @@ def _post_bet(conn, user_id, raw_body):
             if float(user_row["balance"]) < amount:
                 return _resp(400, {"error": "insufficient balance"})
 
-        cur.execute("SELECT id, yes_price, status FROM markets WHERE id = %s", (data["market_id"],))
+        cur.execute("SELECT id, yes_price, status, type FROM markets WHERE id = %s", (data["market_id"],))
         market = cur.fetchone()
         if not market:
             return _resp(404, {"error": "market not found"})
         if market["status"] != "open":
             return _resp(400, {"error": "market is not open"})
+        valid_sides = _VALID_SIDES.get(market["type"] or "binary", ("yes", "no"))
+        if data["side"] not in valid_sides:
+            return _resp(400, {"error": f"side must be one of: {', '.join(valid_sides)}"})
 
         yes_price = float(market["yes_price"])
 
@@ -441,6 +460,15 @@ ALTER TABLE users ADD COLUMN IF NOT EXISTS last_name TEXT;
 ALTER TABLE users ADD COLUMN IF NOT EXISTS nickname TEXT;
 """
 
+SCHEMA_V4 = """
+ALTER TABLE markets ADD COLUMN IF NOT EXISTS type TEXT NOT NULL DEFAULT 'binary';
+ALTER TABLE markets ADD COLUMN IF NOT EXISTS threshold NUMERIC;
+ALTER TABLE bets DROP CONSTRAINT IF EXISTS bets_side_check;
+ALTER TABLE bets ADD CONSTRAINT bets_side_check CHECK (side IN ('yes','no','over','under'));
+ALTER TABLE markets DROP CONSTRAINT IF EXISTS markets_result_check;
+ALTER TABLE markets ADD CONSTRAINT markets_result_check CHECK (result IN ('yes','no','over','under'));
+"""
+
 
 # ── Router ────────────────────────────────────────────────────────────────
 
@@ -452,6 +480,7 @@ def lambda_handler(event, context):
                 cur.execute(SCHEMA_V1)
                 cur.execute(SCHEMA_V2)
                 cur.execute(SCHEMA_V3)
+                cur.execute(SCHEMA_V4)
             conn.commit()
             conn.close()
             return {"status": "migration complete"}

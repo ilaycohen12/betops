@@ -14,7 +14,7 @@ export default function GroupPage({ user, groupId, onBack, onLogout }) {
   const [showInvite, setShowInvite] = useState(false)
   const [toast, setToast] = useState(null)
   const [copied, setCopied] = useState(null)
-  const [newMarket, setNewMarket] = useState({ question: '', closes_at: '' })
+  const [newMarket, setNewMarket] = useState({ question: '', closes_at: '', type: 'binary', threshold: '' })
   const [working, setWorking] = useState(false)
   const [tab, setTab] = useState('markets')
   const [error, setError] = useState(null)
@@ -37,10 +37,15 @@ export default function GroupPage({ user, groupId, onBack, onLogout }) {
 
   const handleCreateMarket = async () => {
     if (!newMarket.question.trim()) return
+    if (newMarket.type === 'over_under' && newMarket.threshold === '') return
     setWorking(true)
     try {
-      await createMarket(groupId, newMarket)
-      setShowCreateMarket(false); setNewMarket({ question: '', closes_at: '' }); load()
+      const payload = { question: newMarket.question, closes_at: newMarket.closes_at, type: newMarket.type }
+      if (newMarket.type === 'over_under') payload.threshold = parseFloat(newMarket.threshold)
+      await createMarket(groupId, payload)
+      setShowCreateMarket(false)
+      setNewMarket({ question: '', closes_at: '', type: 'binary', threshold: '' })
+      load()
       setToast('Market created')
     } catch (e) { setToast(e.message) }
     setWorking(false)
@@ -208,7 +213,34 @@ export default function GroupPage({ user, groupId, onBack, onLogout }) {
       )}
 
       {showCreateMarket && (
-        <Modal title="New market" onClose={() => setShowCreateMarket(false)}>
+        <Modal title="New market" onClose={() => { setShowCreateMarket(false); setNewMarket({ question: '', closes_at: '', type: 'binary', threshold: '' }) }}>
+          {/* Market type selector */}
+          <div>
+            <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 8 }}>Market type</div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {[['binary', 'Yes / No'], ['over_under', 'Over / Under']].map(([val, label]) => (
+                <button key={val} onClick={() => setNewMarket(p => ({ ...p, type: val, threshold: '' }))}
+                  style={{ flex: 1, padding: '9px 0', fontSize: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 0.5,
+                    background: newMarket.type === val ? '#f5f5f5' : 'none',
+                    color: newMarket.type === val ? '#0c0c0c' : '#666',
+                    border: `2px solid ${newMarket.type === val ? '#f5f5f5' : '#2a2a2a'}`,
+                    transition: 'all 0.1s' }}>
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Threshold (over/under only) */}
+          {newMarket.type === 'over_under' && (
+            <div>
+              <div style={{ fontSize: 11, color: '#888', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 6 }}>Threshold number</div>
+              <input type="number" placeholder="e.g. 3" value={newMarket.threshold}
+                onChange={e => setNewMarket(p => ({ ...p, threshold: e.target.value }))}
+                style={{ width: '100%', background: '#161616', border: '2px solid #2a2a2a', padding: '11px 14px', color: '#f5f5f5', fontSize: 16, outline: 'none' }} />
+            </div>
+          )}
+
           <textarea placeholder="What are you betting on?" value={newMarket.question}
             onChange={e => setNewMarket(p => ({ ...p, question: e.target.value }))}
             rows={3} autoFocus
@@ -219,8 +251,9 @@ export default function GroupPage({ user, groupId, onBack, onLogout }) {
               onChange={e => setNewMarket(p => ({ ...p, closes_at: e.target.value }))}
               style={{ width: '100%', background: '#161616', border: '2px solid #2a2a2a', padding: '10px 14px', color: '#f5f5f5', fontSize: 14, outline: 'none', colorScheme: 'dark' }} />
           </div>
-          <button onClick={handleCreateMarket} disabled={working || !newMarket.question.trim()}
-            style={{ ...solidBtn, opacity: working || !newMarket.question.trim() ? 0.4 : 1, width: '100%', padding: '12px' }}>
+          <button onClick={handleCreateMarket}
+            disabled={working || !newMarket.question.trim() || (newMarket.type === 'over_under' && newMarket.threshold === '')}
+            style={{ ...solidBtn, opacity: (working || !newMarket.question.trim() || (newMarket.type === 'over_under' && newMarket.threshold === '')) ? 0.4 : 1, width: '100%', padding: '12px' }}>
             {working ? 'Creating...' : 'Create market'}
           </button>
         </Modal>

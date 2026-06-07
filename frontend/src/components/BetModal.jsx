@@ -8,10 +8,11 @@ export default function BetModal({ market, side, groupId, user, onClose, onDone 
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
 
-  const isYes = side === 'yes'
-  const color = isYes ? '#4caf50' : '#e63946'
-  const price = isYes ? parseFloat(market.yes_price) : 1 - parseFloat(market.yes_price)
+  const isA = side === 'yes' || side === 'over'
+  const color = isA ? '#4caf50' : '#e63946'
+  const price = isA ? parseFloat(market.yes_price) : 1 - parseFloat(market.yes_price)
   const pct = Math.round(price * 100)
+  const sideLabel = side === 'over' ? `Over ${market.threshold}` : side === 'under' ? `Under ${market.threshold}` : side
   const payout = amount && parseFloat(amount) > 0 ? (parseFloat(amount) / price).toFixed(2) : null
   const profit = payout ? (parseFloat(payout) - parseFloat(amount)).toFixed(2) : null
 
@@ -20,7 +21,7 @@ export default function BetModal({ market, side, groupId, user, onClose, onDone 
     setLoading(true); setError(null)
     try {
       await placeBet({ market_id: market.id, group_id: groupId, side, amount: parseFloat(amount) })
-      onDone(`Bet placed — $${parseFloat(amount).toFixed(0)} on ${side.toUpperCase()}`)
+      onDone(`Bet placed — $${parseFloat(amount).toFixed(0)} on ${sideLabel.toUpperCase()}`)
     } catch (e) { setError(e.message); setLoading(false) }
   }
 
@@ -30,7 +31,7 @@ export default function BetModal({ market, side, groupId, user, onClose, onDone 
 
         {/* Header */}
         <div style={{ background: color, color: '#0c0c0c', padding: '10px 20px' }}>
-          <div className="display" style={{ fontSize: 22 }}>BET {side.toUpperCase()} — {pct}%</div>
+          <div className="display" style={{ fontSize: 22 }}>BET {sideLabel.toUpperCase()} — {pct}%</div>
         </div>
 
         <div style={{ padding: 24 }}>
