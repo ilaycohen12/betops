@@ -3,6 +3,8 @@ import json
 import logging
 import math
 import os
+import signal
+import threading
 import time
 
 import psycopg2
@@ -13,6 +15,17 @@ log = logging.getLogger(__name__)
 
 QUEUE_URL = os.environ.get("SQS_QUEUE_URL", "")
 LMSR_B = float(os.environ.get("LMSR_B", "100"))
+
+_shutdown = threading.Event()
+
+
+def _handle_sigterm(signum, frame):
+    log.info("Shutdown signal received, stopping after current poll...")
+    _shutdown.set()
+
+
+signal.signal(signal.SIGTERM, _handle_sigterm)
+signal.signal(signal.SIGINT, _handle_sigterm)
 
 
 def get_db():
@@ -131,7 +144,7 @@ def main():
     sqs = get_sqs()
     log.info("Worker started, polling SQS...")
     iteration = 0
-    while True:
+    while not _shutdown.is_set():
         try:
             conn = get_db()
             try:
@@ -144,6 +157,8 @@ def main():
                         WaitTimeSeconds=20,
                     )
                     for msg in response.get("Messages", []):
+                        if _shutdown.is_set():
+                            break
                         try:
                             process_message(conn, msg)
                             sqs.delete_message(QueueUrl=QUEUE_URL, ReceiptHandle=msg["ReceiptHandle"])
@@ -153,9 +168,12 @@ def main():
                 conn.close()
         except Exception as e:
             log.error("Worker error: %s", e)
-            time.sleep(5)
+            if not _shutdown.is_set():
+                time.sleep(5)
         iteration += 1
-        time.sleep(1)
+        if not _shutdown.is_set():
+            time.sleep(1)
+    log.info("Worker shutdown complete")
 
 
 if __name__ == "__main__":
