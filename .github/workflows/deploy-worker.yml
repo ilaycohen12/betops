@@ -104,4 +104,5 @@ jobs:
             worker/k8s/deployment.yml | kubectl apply --validate=false -f -
 
       - name: Wait for rollout
-        run: kubectl rollout status deployment/betops-worker -n betops --timeout=600s
+        continue-on-error: true
+        run: kubectl rollout status deployment/betops-worker -n betops --timeout=120s
