@@ -16,7 +16,7 @@ spec:
       hostNetwork: true
       dnsPolicy: Default
       nodeSelector:
-        kubernetes.io/hostname: master-node
+        kubernetes.io/hostname: worker-node01
       terminationGracePeriodSeconds: 40
       imagePullSecrets:
         - name: ghcr-secret
