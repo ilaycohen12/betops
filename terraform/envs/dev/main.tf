@@ -27,6 +27,14 @@ provider "aws" {
   region = var.aws_region
 }
 
+locals {
+  tags = {
+    project = var.project
+    env     = "dev"
+    managed = "terraform"
+  }
+}
+
 # --- VPC ---
 
 module "vpc" {
@@ -119,4 +127,12 @@ resource "aws_lambda_permission" "apigw" {
   function_name = aws_lambda_function.api.function_name
   principal     = "apigateway.amazonaws.com"
   source_arn    = "${aws_apigatewayv2_api.http.execution_arn}/*/*"
+}
+
+# --- Frontend ---
+
+module "frontend" {
+  source  = "../../modules/frontend"
+  project = var.project
+  tags    = local.tags
 }

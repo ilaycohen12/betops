@@ -12,3 +12,8 @@ output "db_secret_arn" {
   description = "ARN of DB credentials in Secrets Manager"
   value       = module.rds.db_secret_arn
 }
+
+output "frontend_url" {
+  description = "CloudFront URL of the dev frontend"
+  value       = module.frontend.cloudfront_url
+}
