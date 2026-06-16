@@ -52,7 +52,7 @@ resource "aws_db_instance" "main" {
   db_subnet_group_name   = aws_db_subnet_group.main.name
   vpc_security_group_ids = [var.rds_sg_id]
 
-  # Backups — configurable per environment (0 = disabled, useful in dev)
+  # Backups — configurable per environment (0 = disabled, useful for free tier / dev)
   backup_retention_period = var.backup_retention
   backup_window           = "03:00-04:00" # 3-4am UTC
 

@@ -76,5 +76,6 @@ jobs:
           echo "Distribution ID: $DIST_ID"
           aws cloudfront create-invalidation --distribution-id "$DIST_ID" --paths "/*"
           DOMAIN=$(aws cloudfront get-distribution --id "$DIST_ID" --query "Distribution.DomainName" --output text)
+          echo "Frontend URL: https://$DOMAIN"
           echo "## Frontend deployed (${{ needs.set-env.outputs.env_name }})" >> $GITHUB_STEP_SUMMARY
           echo "URL: https://$DOMAIN" >> $GITHUB_STEP_SUMMARY

@@ -1,0 +1,25 @@
+namespace: betops
+
+replicas: 1
+
+image:
+  repository: ghcr.io/ilaycohen12/betops-worker
+  tag: latest
+
+imagePullSecret: ghcr-secret
+secretName: betops-secrets
+
+nodeSelector:
+  hostname: worker-node01
+
+terminationGracePeriodSeconds: 40
+
+awsRegion: us-east-1
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 500m
+    memory: 256Mi

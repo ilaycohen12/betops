@@ -1,0 +1,51 @@
+name: Restart Tailscale EC2
+
+on:
+  workflow_dispatch:
+
+env:
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_DEFAULT_REGION: us-east-1
+  TF_VERSION: 1.7.0
+  TF_VAR_tailscale_auth_key: ${{ secrets.TAILSCALE_AUTH_KEY }}
+  TF_VAR_jwt_secret: ${{ secrets.JWT_SECRET }}
+
+jobs:
+  replace:
+    name: Force-replace Tailscale EC2
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Cache Terraform providers
+        uses: actions/cache@v4
+        with:
+          path: terraform/envs/prod/.terraform
+          key: terraform-${{ env.TF_VERSION }}-prod-${{ hashFiles('terraform/envs/prod/.terraform.lock.hcl') }}
+          restore-keys: terraform-${{ env.TF_VERSION }}-prod-
+
+      - name: Terraform Init
+        working-directory: terraform/envs/prod
+        run: terraform init
+
+      - name: Force-replace Tailscale EC2
+        working-directory: terraform/envs/prod
+        run: |
+          terraform apply -auto-approve \
+            -replace="module.tailscale.aws_instance.tailscale" \
+            -target="module.tailscale.aws_instance.tailscale"
+
+      - name: Show new instance details
+        working-directory: terraform/envs/prod
+        run: |
+          terraform output -json 2>/dev/null | python3 -c "
+          import json,sys
+          o = json.load(sys.stdin)
+          for k,v in o.items():
+              print(f'{k}: {v[\"value\"]}')
+          " || true

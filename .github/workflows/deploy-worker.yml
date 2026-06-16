@@ -91,6 +91,9 @@ jobs:
           echo "${{ secrets.K3S_KUBECONFIG }}" | base64 -d > kubeconfig.yaml
           echo "KUBECONFIG=$PWD/kubeconfig.yaml" >> $GITHUB_ENV
 
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+
       - name: Set env-specific secrets
         run: |
           if [ "${{ needs.set-env.outputs.env_name }}" = "prod" ]; then
@@ -134,10 +137,10 @@ jobs:
 
       - name: Deploy worker
         run: |
-          sed \
-            -e "s|betops-worker:latest|betops-worker:${{ needs.build-push.outputs.sha_tag }}|" \
-            -e "s|namespace: betops$|namespace: ${{ needs.set-env.outputs.namespace }}|" \
-            worker/k8s/deployment.yml | kubectl apply --validate=false -f -
+          helm upgrade --install betops-worker worker/k8s/ \
+            --namespace ${{ needs.set-env.outputs.namespace }} \
+            --set namespace=${{ needs.set-env.outputs.namespace }} \
+            --set image.tag=${{ needs.build-push.outputs.sha_tag }}
 
       - name: Wait for rollout
         continue-on-error: true

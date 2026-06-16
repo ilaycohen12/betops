@@ -1,0 +1,6 @@
+apiVersion: v2
+name: betops-worker
+description: Helm chart for the betops background worker
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

@@ -34,5 +34,11 @@ variable "rds_sg_id" {
 variable "backup_retention" {
   description = "Number of days to retain automated backups (0 = disabled)"
   type        = number
-  default     = 7
+  default     = 0
+}
+
+variable "tags" {
+  description = "Tags to apply to all resources"
+  type        = map(string)
+  default     = {}
 }

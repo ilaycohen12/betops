@@ -85,10 +85,6 @@ resource "aws_route_table_association" "private_b" {
 }
 
 # ─── VPC ENDPOINTS ─────────────────────────────────────────────────────────
-# Instead of routing through a NAT Gateway, these endpoints let Lambda
-# reach AWS services privately inside AWS's own network. Cheaper and more secure.
-
-# Security group for VPC endpoints — allow HTTPS from Lambda
 resource "aws_security_group" "vpc_endpoints" {
   name        = "${var.project}-vpc-endpoints-sg"
   description = "Security group for VPC interface endpoints"
@@ -105,7 +101,6 @@ resource "aws_security_group" "vpc_endpoints" {
   tags = { Name = "${var.project}-vpc-endpoints-sg" }
 }
 
-# SQS endpoint — Lambda can send/receive messages without going through internet
 resource "aws_vpc_endpoint" "sqs" {
   vpc_id              = aws_vpc.main.id
   service_name        = "com.amazonaws.${var.aws_region}.sqs"
@@ -113,11 +108,9 @@ resource "aws_vpc_endpoint" "sqs" {
   subnet_ids          = [aws_subnet.private.id, aws_subnet.private_b.id]
   security_group_ids  = [aws_security_group.vpc_endpoints.id]
   private_dns_enabled = true
-
-  tags = { Name = "${var.project}-sqs-endpoint" }
+  tags                = { Name = "${var.project}-sqs-endpoint" }
 }
 
-# Secrets Manager endpoint — Lambda reads DB credentials privately
 resource "aws_vpc_endpoint" "secretsmanager" {
   vpc_id              = aws_vpc.main.id
   service_name        = "com.amazonaws.${var.aws_region}.secretsmanager"
@@ -125,8 +118,7 @@ resource "aws_vpc_endpoint" "secretsmanager" {
   subnet_ids          = [aws_subnet.private.id, aws_subnet.private_b.id]
   security_group_ids  = [aws_security_group.vpc_endpoints.id]
   private_dns_enabled = true
-
-  tags = { Name = "${var.project}-secretsmanager-endpoint" }
+  tags                = { Name = "${var.project}-secretsmanager-endpoint" }
 }
 
 # ─── SECURITY GROUPS ───────────────────────────────────────────────────────
