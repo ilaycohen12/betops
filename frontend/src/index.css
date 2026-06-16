@@ -1,0 +1,32 @@
+@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700;800;900&display=swap');
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Inter', -apple-system, sans-serif;
+  background: #0c0c0c;
+  color: #f5f5f5;
+  min-height: 100vh;
+}
+
+button { cursor: pointer; border: none; font-family: inherit; }
+input, textarea { font-family: inherit; }
+
+.display { font-family: 'Bebas Neue', 'Inter', sans-serif; letter-spacing: 0.04em; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.fade-up { animation: fadeUp 0.25s ease both; }
+
+hr.thick {
+  border: none;
+  border-top: 3px solid #f5f5f5;
+}
+
+hr.thin {
+  border: none;
+  border-top: 1px solid #2a2a2a;
+}
