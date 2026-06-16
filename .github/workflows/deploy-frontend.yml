@@ -2,7 +2,7 @@ name: Deploy Frontend
 
 on:
   push:
-    branches: [main]
+    branches: [main, dev]
     paths: ['frontend/**']
   workflow_dispatch:
 
@@ -15,9 +15,33 @@ env:
   AWS_DEFAULT_REGION: us-east-1
 
 jobs:
-  deploy:
-    name: Build and deploy frontend
+
+  # ── Determine environment ─────────────────────────────────────────────────
+  set-env:
+    name: Set environment
     runs-on: ubuntu-latest
+    outputs:
+      bucket: ${{ steps.env.outputs.bucket }}
+      api_url: ${{ steps.env.outputs.api_url }}
+      env_name: ${{ steps.env.outputs.env_name }}
+    steps:
+      - name: Resolve environment
+        id: env
+        run: |
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            echo "bucket=betops-frontend" >> $GITHUB_OUTPUT
+            echo "api_url=https://a85f5v24nb.execute-api.us-east-1.amazonaws.com" >> $GITHUB_OUTPUT
+            echo "env_name=prod" >> $GITHUB_OUTPUT
+          else
+            echo "bucket=betops-dev-frontend" >> $GITHUB_OUTPUT
+            echo "api_url=https://y6beifhx9j.execute-api.us-east-1.amazonaws.com" >> $GITHUB_OUTPUT
+            echo "env_name=dev" >> $GITHUB_OUTPUT
+          fi
+
+  deploy:
+    name: Build and deploy frontend (${{ needs.set-env.outputs.env_name }})
+    runs-on: ubuntu-latest
+    needs: set-env
     steps:
       - uses: actions/checkout@v4
 
@@ -34,20 +58,20 @@ jobs:
       - name: Build
         working-directory: frontend
         env:
-          VITE_API_URL: https://a85f5v24nb.execute-api.us-east-1.amazonaws.com
+          VITE_API_URL: ${{ needs.set-env.outputs.api_url }}
         run: npm run build
 
       - name: Deploy to S3
-        run: aws s3 sync frontend/dist/ s3://betops-frontend/ --delete
+        run: aws s3 sync frontend/dist/ s3://${{ needs.set-env.outputs.bucket }}/ --delete
 
       - name: Invalidate CloudFront cache
         run: |
           DIST_ID=$(aws cloudfront list-distributions \
-            --query "DistributionList.Items[?contains(Origins.Items[0].DomainName,'betops-frontend')].Id | [0]" \
+            --query "DistributionList.Items[?contains(Origins.Items[0].DomainName,'${{ needs.set-env.outputs.bucket }}')].Id | [0]" \
             --output text)
           echo "Distribution ID: $DIST_ID"
           aws cloudfront create-invalidation --distribution-id "$DIST_ID" --paths "/*"
           DOMAIN=$(aws cloudfront get-distribution --id "$DIST_ID" --query "Distribution.DomainName" --output text)
           echo "Frontend URL: https://$DOMAIN"
-          echo "## Frontend deployed" >> $GITHUB_STEP_SUMMARY
+          echo "## Frontend deployed (${{ needs.set-env.outputs.env_name }})" >> $GITHUB_STEP_SUMMARY
           echo "URL: https://$DOMAIN" >> $GITHUB_STEP_SUMMARY
