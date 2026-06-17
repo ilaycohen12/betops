@@ -56,7 +56,7 @@ module "rds" {
   project            = var.project
   private_subnet_ids = [module.vpc.private_subnet_id, module.vpc.private_subnet_b_id]
   rds_sg_id          = module.vpc.rds_sg_id
-  backup_retention   = 0
+  backup_retention   = var.backup_retention
 }
 
 # --- SQS ---
@@ -94,6 +94,14 @@ module "api_gateway" {
   tags                 = local.tags
 }
 
+# --- Frontend ---
+
+module "frontend" {
+  source  = "../../modules/frontend"
+  project = var.project
+  tags    = local.tags
+}
+
 # --- Tailscale ---
 
 module "tailscale" {
@@ -102,8 +110,8 @@ module "tailscale" {
   project            = var.project
   vpc_id             = module.vpc.vpc_id
   public_subnet_id   = module.vpc.public_subnet_id
-  vpc_cidr           = var.vpc_cidr
+  advertise_routes   = "${var.private_subnet_cidr},${var.private_subnet_b_cidr}"
   tailscale_auth_key = var.tailscale_auth_key
+  rds_sg_id          = module.vpc.rds_sg_id
   tags               = local.tags
 }
-

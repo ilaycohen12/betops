@@ -2,9 +2,9 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: betops-worker
-  namespace: betops
+  namespace: {{ .Values.namespace }}
 spec:
-  replicas: 1
+  replicas: {{ .Values.replicas }}
   selector:
     matchLabels:
       app: betops-worker
@@ -16,55 +16,55 @@ spec:
       hostNetwork: true
       dnsPolicy: Default
       nodeSelector:
-        kubernetes.io/hostname: worker-node01
-      terminationGracePeriodSeconds: 40
+        kubernetes.io/hostname: {{ .Values.nodeSelector.hostname }}
+      terminationGracePeriodSeconds: {{ .Values.terminationGracePeriodSeconds }}
       imagePullSecrets:
-        - name: ghcr-secret
+        - name: {{ .Values.imagePullSecret }}
       containers:
         - name: worker
-          image: ghcr.io/ilaycohen12/betops-worker:latest
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
           env:
             - name: SQS_QUEUE_URL
               valueFrom:
                 secretKeyRef:
-                  name: betops-secrets
+                  name: {{ .Values.secretName }}
                   key: SQS_QUEUE_URL
             - name: DB_HOST
               valueFrom:
                 secretKeyRef:
-                  name: betops-secrets
+                  name: {{ .Values.secretName }}
                   key: DB_HOST
             - name: DB_NAME
               valueFrom:
                 secretKeyRef:
-                  name: betops-secrets
+                  name: {{ .Values.secretName }}
                   key: DB_NAME
             - name: DB_USER
               valueFrom:
                 secretKeyRef:
-                  name: betops-secrets
+                  name: {{ .Values.secretName }}
                   key: DB_USER
             - name: DB_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: betops-secrets
+                  name: {{ .Values.secretName }}
                   key: DB_PASSWORD
             - name: AWS_ACCESS_KEY_ID
               valueFrom:
                 secretKeyRef:
-                  name: betops-secrets
+                  name: {{ .Values.secretName }}
                   key: AWS_ACCESS_KEY_ID
             - name: AWS_SECRET_ACCESS_KEY
               valueFrom:
                 secretKeyRef:
-                  name: betops-secrets
+                  name: {{ .Values.secretName }}
                   key: AWS_SECRET_ACCESS_KEY
             - name: AWS_DEFAULT_REGION
-              value: us-east-1
+              value: {{ .Values.awsRegion }}
           resources:
             requests:
-              cpu: 100m
-              memory: 128Mi
+              cpu: {{ .Values.resources.requests.cpu }}
+              memory: {{ .Values.resources.requests.memory }}
             limits:
-              cpu: 500m
-              memory: 256Mi
+              cpu: {{ .Values.resources.limits.cpu }}
+              memory: {{ .Values.resources.limits.memory }}

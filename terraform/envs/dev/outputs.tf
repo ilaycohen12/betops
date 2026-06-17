@@ -22,3 +22,12 @@ output "tailscale_instance_id" {
   description = "Tailscale subnet router EC2 instance ID"
   value       = module.tailscale.instance_id
 }
+
+output "private_route_table_id" {
+  value = module.vpc.private_route_table_id
+}
+
+output "frontend_url" {
+  description = "CloudFront URL of the dev frontend"
+  value       = module.frontend.cloudfront_url
+}

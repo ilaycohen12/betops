@@ -1,0 +1,125 @@
+name: Claude Issue Creator
+
+on:
+  # Opens an issue automatically when tests fail on main
+  workflow_run:
+    workflows: ["Deploy"]
+    types: [completed]
+    branches: [main]
+
+  # Also allows manual trigger with a custom message
+  workflow_dispatch:
+    inputs:
+      title:
+        description: "Issue title"
+        required: true
+      body:
+        description: "Issue description (Claude will expand it)"
+        required: true
+      label:
+        description: "Label"
+        required: false
+        default: "bug"
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  # ── Auto-open issue on deploy failure ────────────────────────────────────
+  on-failure:
+    name: Open issue on deploy failure
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'failure' }}
+
+    steps:
+      - name: Generate issue body with Claude
+        id: claude
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          RUN_URL="${{ github.event.workflow_run.html_url }}"
+          RUN_NAME="${{ github.event.workflow_run.name }}"
+          HEAD_SHA="${{ github.event.workflow_run.head_sha }}"
+
+          RESPONSE=$(curl -s https://api.anthropic.com/v1/messages \
+            -H "x-api-key: $ANTHROPIC_API_KEY" \
+            -H "anthropic-version: 2023-06-01" \
+            -H "content-type: application/json" \
+            -d "$(jq -n \
+              --arg url "$RUN_URL" \
+              --arg name "$RUN_NAME" \
+              --arg sha "$HEAD_SHA" \
+              '{
+                model: "claude-haiku-4-5-20251001",
+                max_tokens: 512,
+                messages: [{
+                  role: "user",
+                  content: ("A GitHub Actions workflow failed on the BetOps project.\n\nWorkflow: " + $name + "\nCommit: " + $sha + "\nRun URL: " + $url + "\n\nWrite a concise GitHub issue body (markdown) with these sections:\n- **What failed** (workflow name + commit)\n- **Next steps** (2-3 bullet points to investigate)\n- **Run link**\n\nKeep it short and actionable.")
+                }]
+              }')")
+
+          BODY=$(echo "$RESPONSE" | jq -r '.content[0].text')
+          echo "body<<EOF" >> $GITHUB_OUTPUT
+          echo "$BODY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Open GitHub issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🚨 Deploy failed — ${{ github.event.workflow_run.head_sha }}`.slice(0, 80),
+              body: `${{ steps.claude.outputs.body }}`,
+              labels: ['bug', 'ci-failure']
+            });
+
+  # ── Manual trigger — Claude expands your rough description ───────────────
+  manual:
+    name: Open issue from manual trigger
+    runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' }}
+
+    steps:
+      - name: Expand issue with Claude
+        id: claude
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          TITLE="${{ github.event.inputs.title }}"
+          RAW_BODY="${{ github.event.inputs.body }}"
+
+          RESPONSE=$(curl -s https://api.anthropic.com/v1/messages \
+            -H "x-api-key: $ANTHROPIC_API_KEY" \
+            -H "anthropic-version: 2023-06-01" \
+            -H "content-type: application/json" \
+            -d "$(jq -n \
+              --arg title "$TITLE" \
+              --arg body "$RAW_BODY" \
+              '{
+                model: "claude-haiku-4-5-20251001",
+                max_tokens: 512,
+                messages: [{
+                  role: "user",
+                  content: ("You are a DevOps engineer working on BetOps — an AWS platform using Terraform, Lambda, RDS, SQS, and a homelab worker.\n\nExpand this rough issue into a well-structured GitHub issue body:\n\nTitle: " + $title + "\nDescription: " + $body + "\n\nFormat:\n## Problem\n...\n## Expected Behavior\n...\n## Suggested Fix\n...\n\nBe concise.")
+                }]
+              }')")
+
+          BODY=$(echo "$RESPONSE" | jq -r '.content[0].text')
+          echo "body<<EOF" >> $GITHUB_OUTPUT
+          echo "$BODY" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: "${{ github.event.inputs.title }}",
+              body: `${{ steps.claude.outputs.body }}`,
+              labels: ["${{ github.event.inputs.label }}"]
+            });

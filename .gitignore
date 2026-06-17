@@ -15,3 +15,7 @@ __pycache__/
 .env
 *.pem
 *.key
+
+# Node
+node_modules/
+dist/
