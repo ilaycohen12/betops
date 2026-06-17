@@ -9,8 +9,13 @@ output "db_endpoint" {
 }
 
 output "db_secret_arn" {
-  description = "ARN of DB credentials in Secrets Manager"
+  description = "ARN of prod DB credentials in Secrets Manager"
   value       = module.rds.db_secret_arn
+}
+
+output "dev_db_secret_arn" {
+  description = "ARN of dev DB credentials in Secrets Manager (for homelab worker and dev migrations)"
+  value       = aws_secretsmanager_secret.dev_db.arn
 }
 
 output "sqs_queue_url" {

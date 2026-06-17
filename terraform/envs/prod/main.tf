@@ -59,6 +59,56 @@ module "rds" {
   backup_retention   = var.backup_retention
 }
 
+# --- Dev database on prod RDS ---
+# betops_dev lives on the same RDS instance as betops (prod).
+# The dev worker on the homelab connects to it via Tailscale.
+
+resource "random_password" "dev_db" {
+  length           = 32
+  special          = true
+  override_special = "!#$%&*()-_=+[]{}<>:?"
+}
+
+resource "aws_secretsmanager_secret" "dev_db" {
+  name                    = "betops/dev-db-credentials"
+  recovery_window_in_days = 0
+  tags                    = { Name = "betops-dev-db-credentials" }
+}
+
+resource "aws_secretsmanager_secret_version" "dev_db" {
+  secret_id = aws_secretsmanager_secret.dev_db.id
+  secret_string = jsonencode({
+    username = "betops_dev"
+    password = random_password.dev_db.result
+    host     = module.rds.db_endpoint
+    port     = 5432
+    dbname   = "betops_dev"
+  })
+}
+
+# Invokes the prod Lambda (which has RDS access) to CREATE DATABASE betops_dev.
+# Runs once on first apply; re-runs if the dev secret is rotated.
+# RDS takes ~8 minutes to create, so by the time this runs the Lambda
+# will already have the updated code from deploy-lambda.yml.
+resource "null_resource" "create_dev_db" {
+  triggers = {
+    secret_version = aws_secretsmanager_secret_version.dev_db.id
+  }
+
+  provisioner "local-exec" {
+    command = <<-EOF
+      aws lambda invoke \
+        --function-name ${module.lambda.function_name} \
+        --payload "{\"action\":\"create_dev_db\",\"dev_secret_arn\":\"${aws_secretsmanager_secret.dev_db.arn}\"}" \
+        --cli-binary-format raw-in-base64-out \
+        /tmp/create_dev_db_response.json
+      python3 -c "import json,sys; r=json.load(open('/tmp/create_dev_db_response.json')); print(r); sys.exit(1 if r.get('status')=='error' else 0)"
+    EOF
+  }
+
+  depends_on = [module.rds, module.lambda, aws_secretsmanager_secret_version.dev_db]
+}
+
 # --- SQS ---
 
 module "sqs" {
@@ -72,15 +122,16 @@ module "sqs" {
 module "lambda" {
   source = "../../modules/lambda"
 
-  project       = var.project
-  handler_path  = "${path.module}/../../../lambdas/api/handler.py"
-  db_secret_arn = module.rds.db_secret_arn
-  sqs_queue_arn = module.sqs.queue_arn
-  sqs_queue_url = module.sqs.queue_url
-  subnet_ids    = [module.vpc.private_subnet_id, module.vpc.private_subnet_b_id]
-  lambda_sg_id  = module.vpc.lambda_sg_id
-  jwt_secret    = var.jwt_secret
-  tags          = local.tags
+  project           = var.project
+  handler_path      = "${path.module}/../../../lambdas/api/handler.py"
+  db_secret_arn     = module.rds.db_secret_arn
+  extra_secret_arns = [aws_secretsmanager_secret.dev_db.arn]
+  sqs_queue_arn     = module.sqs.queue_arn
+  sqs_queue_url     = module.sqs.queue_url
+  subnet_ids        = [module.vpc.private_subnet_id, module.vpc.private_subnet_b_id]
+  lambda_sg_id      = module.vpc.lambda_sg_id
+  jwt_secret        = var.jwt_secret
+  tags              = local.tags
 }
 
 # --- API Gateway ---

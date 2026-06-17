@@ -10,15 +10,17 @@ import boto3
 import jwt
 import psycopg2
 import psycopg2.extras
+from psycopg2 import sql as pgsql
 
 JWT_SECRET = os.environ.get("JWT_SECRET", "dev-secret-change-in-prod")
 
 
-def _get_db_conn():
-    if os.environ.get("DB_SECRET_ARN"):
+def _get_db_conn(secret_arn=None):
+    arn = secret_arn or os.environ.get("DB_SECRET_ARN")
+    if arn:
         sm = boto3.client("secretsmanager")
         secret = json.loads(
-            sm.get_secret_value(SecretId=os.environ["DB_SECRET_ARN"])["SecretString"]
+            sm.get_secret_value(SecretId=arn)["SecretString"]
         )
         return psycopg2.connect(
             host=secret["host"], port=secret["port"],
@@ -475,7 +477,7 @@ ALTER TABLE markets ADD CONSTRAINT markets_result_check CHECK (result IN ('yes',
 def lambda_handler(event, context):
     if event.get("action") == "migrate":
         try:
-            conn = _get_db_conn()
+            conn = _get_db_conn(event.get("db_secret_arn"))
             with conn.cursor() as cur:
                 cur.execute(SCHEMA_V1)
                 cur.execute(SCHEMA_V2)
@@ -489,7 +491,7 @@ def lambda_handler(event, context):
 
     if event.get("action") == "seed":
         try:
-            conn = _get_db_conn()
+            conn = _get_db_conn(event.get("db_secret_arn"))
             with conn.cursor() as cur:
                 cur.execute("""
                     INSERT INTO users (id, email, name, balance) VALUES
@@ -505,6 +507,40 @@ def lambda_handler(event, context):
             conn.commit()
             conn.close()
             return {"status": "seed complete"}
+        except Exception as e:
+            return {"status": "error", "error": str(e)}
+
+    if event.get("action") == "create_dev_db":
+        dev_secret_arn = event.get("dev_secret_arn")
+        if not dev_secret_arn:
+            return {"status": "error", "error": "dev_secret_arn required"}
+        try:
+            sm = boto3.client("secretsmanager")
+            dev_creds = json.loads(sm.get_secret_value(SecretId=dev_secret_arn)["SecretString"])
+
+            conn = _get_db_conn()  # connects as admin to prod betops database
+            conn.autocommit = True  # CREATE DATABASE cannot run inside a transaction
+            with conn.cursor() as cur:
+                cur.execute("SELECT 1 FROM pg_database WHERE datname = 'betops_dev'")
+                if not cur.fetchone():
+                    cur.execute("CREATE DATABASE betops_dev")
+
+                cur.execute("SELECT 1 FROM pg_roles WHERE rolname = %s", (dev_creds["username"],))
+                if not cur.fetchone():
+                    cur.execute(
+                        pgsql.SQL("CREATE USER {} WITH PASSWORD %s").format(
+                            pgsql.Identifier(dev_creds["username"])
+                        ),
+                        (dev_creds["password"],),
+                    )
+
+                cur.execute(
+                    pgsql.SQL("GRANT ALL PRIVILEGES ON DATABASE betops_dev TO {}").format(
+                        pgsql.Identifier(dev_creds["username"])
+                    )
+                )
+            conn.close()
+            return {"status": "dev database created", "db": "betops_dev", "user": dev_creds["username"]}
         except Exception as e:
             return {"status": "error", "error": str(e)}
 

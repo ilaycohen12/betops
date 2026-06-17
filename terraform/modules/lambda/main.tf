@@ -25,7 +25,7 @@ resource "aws_iam_role_policy_attachment" "vpc" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaVPCAccessExecutionRole"
 }
 
-# Allow Lambda to read from Secrets Manager
+# Allow Lambda to read from Secrets Manager (prod + any extra secrets e.g. dev DB)
 resource "aws_iam_role_policy" "secrets" {
   name = "${var.project}-lambda-secrets"
   role = aws_iam_role.lambda_exec.id
@@ -35,7 +35,7 @@ resource "aws_iam_role_policy" "secrets" {
     Statement = [{
       Effect   = "Allow"
       Action   = ["secretsmanager:GetSecretValue"]
-      Resource = var.db_secret_arn
+      Resource = concat([var.db_secret_arn], var.extra_secret_arns)
     }]
   })
 }
