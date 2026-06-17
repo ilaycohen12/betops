@@ -29,20 +29,31 @@ jobs:
     name: Migrate (${{ inputs.environment }})
     runs-on: ubuntu-latest
     steps:
-      - name: Resolve function name
-        id: fn
+      - name: Resolve secret ARN for dev
+        id: secret
+        if: inputs.environment == 'dev'
         run: |
-          if [ "${{ inputs.environment }}" = "prod" ]; then
-            echo "name=betops-api" >> $GITHUB_OUTPUT
-          else
-            echo "name=betops-dev-api" >> $GITHUB_OUTPUT
-          fi
+          ARN=$(aws secretsmanager describe-secret \
+            --secret-id betops/dev-db-credentials \
+            --query 'ARN' --output text)
+          echo "arn=$ARN" >> $GITHUB_OUTPUT
 
-      - name: Invoke Lambda
+      - name: Invoke Lambda (prod)
+        if: inputs.environment == 'prod'
         run: |
           aws lambda invoke \
-            --function-name ${{ steps.fn.outputs.name }} \
-            --payload '{"action":"${{ inputs.action }}"}' \
+            --function-name betops-api \
+            --payload "{\"action\":\"${{ inputs.action }}\"}" \
+            --cli-binary-format raw-in-base64-out \
+            response.json
+          cat response.json
+
+      - name: Invoke Lambda (dev — targets betops_dev on prod RDS)
+        if: inputs.environment == 'dev'
+        run: |
+          aws lambda invoke \
+            --function-name betops-api \
+            --payload "{\"action\":\"${{ inputs.action }}\",\"db_secret_arn\":\"${{ steps.secret.outputs.arn }}\"}" \
             --cli-binary-format raw-in-base64-out \
             response.json
           cat response.json
