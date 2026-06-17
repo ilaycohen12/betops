@@ -91,6 +91,19 @@ jobs:
           echo "${{ secrets.K3S_KUBECONFIG }}" | base64 -d > kubeconfig.yaml
           echo "KUBECONFIG=$PWD/kubeconfig.yaml" >> $GITHUB_ENV
 
+      - name: Wait for k3s API reachability
+        run: |
+          echo "Waiting for k3s API at 100.81.132.76:6443..."
+          for i in $(seq 1 12); do
+            if nc -z -w 5 100.81.132.76 6443 2>/dev/null; then
+              echo "k3s API reachable"
+              break
+            fi
+            echo "Attempt $i/12 failed, retrying in 5s..."
+            sleep 5
+          done
+          nc -z -w 5 100.81.132.76 6443 || (echo "k3s API unreachable after 60s" && exit 1)
+
       - name: Setup Helm
         uses: azure/setup-helm@v4
 
