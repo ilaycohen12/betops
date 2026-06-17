@@ -13,6 +13,12 @@ variable "db_secret_arn" {
   type        = string
 }
 
+variable "extra_secret_arns" {
+  description = "Additional Secrets Manager ARNs the Lambda can read (e.g. dev DB secret)"
+  type        = list(string)
+  default     = []
+}
+
 variable "sqs_queue_arn" {
   description = "ARN of the SQS queue"
   type        = string
