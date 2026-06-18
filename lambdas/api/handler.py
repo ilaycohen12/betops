@@ -1,6 +1,7 @@
 import datetime
 import hashlib
 import json
+import logging
 import os
 import random
 import secrets
@@ -13,6 +14,23 @@ import psycopg2.extras
 from psycopg2 import sql as pgsql
 
 JWT_SECRET = os.environ.get("JWT_SECRET", "dev-secret-change-in-prod")
+
+
+class _JsonFormatter(logging.Formatter):
+    def format(self, record):
+        entry = {
+            "level": record.levelname,
+            "message": record.getMessage(),
+        }
+        if record.exc_info:
+            entry["exception"] = self.formatException(record.exc_info)
+        return json.dumps(entry)
+
+
+_handler = logging.StreamHandler()
+_handler.setFormatter(_JsonFormatter())
+logging.basicConfig(level=logging.INFO, handlers=[_handler])
+log = logging.getLogger(__name__)
 
 
 def _get_db_conn(secret_arn=None):
@@ -44,6 +62,8 @@ def _get_sqs():
 
 
 def _resp(status, body):
+    if status >= 500:
+        log.error(json.dumps({"status": status, "body": body}))
     return {
         "statusCode": status,
         "headers": {
@@ -132,6 +152,7 @@ def _post_register(conn, body):
         user = dict(cur.fetchone())
         conn.commit()
     token = _make_token(str(user["id"]))
+    log.info(json.dumps({"event": "user_registered", "user_id": str(user["id"])}))
     return _resp(201, {"token": token, "user": user})
 
 
@@ -152,6 +173,7 @@ def _post_login(conn, body):
     user = dict(user)
     user.pop("password_hash")
     token = _make_token(str(user["id"]))
+    log.info(json.dumps({"event": "user_login", "user_id": str(user["id"])}))
     return _resp(200, {"token": token, "user": user})
 
 
@@ -187,6 +209,7 @@ def _post_group(conn, user_id, body):
             VALUES (%s, %s, 500.00)
         """, (group["id"], user_id))
         conn.commit()
+    log.info(json.dumps({"event": "group_created", "group_id": str(group["id"]), "user_id": str(user_id)}))
     return _resp(201, dict(group))
 
 
@@ -207,6 +230,7 @@ def _post_join(conn, user_id, body):
             VALUES (%s, %s, 500.00)
         """, (group["id"], user_id))
         conn.commit()
+    log.info(json.dumps({"event": "group_joined", "group_id": str(group["id"]), "user_id": str(user_id)}))
     return _resp(201, {"group_id": str(group["id"]), "name": group["name"]})
 
 
@@ -271,6 +295,7 @@ def _post_group_market(conn, group_id, user_id, body):
               user_id, body.get("closes_at"), market_type, threshold))
         market = cur.fetchone()
         conn.commit()
+    log.info(json.dumps({"event": "market_created", "market_id": str(market["id"]), "group_id": str(group_id)}))
     return _resp(201, dict(market))
 
 
@@ -303,6 +328,7 @@ def _post_resolve(conn, market_id, body):
                 "result": body["result"],
             }),
         )
+    log.info(json.dumps({"event": "market_resolve_triggered", "market_id": str(market_id), "result": body["result"]}))
     return _resp(200, {"message": "settlement triggered", "result": body["result"]})
 
 
@@ -385,6 +411,14 @@ def _post_bet(conn, user_id, raw_body):
             }),
         )
 
+    log.info(json.dumps({
+        "event": "bet_placed",
+        "bet_id": str(bet["id"]),
+        "user_id": str(user_id),
+        "market_id": str(data["market_id"]),
+        "side": data["side"],
+        "amount": amount,
+    }))
     return _resp(201, {
         "bet_id": str(bet["id"]),
         "market_id": data["market_id"],
@@ -554,6 +588,8 @@ def lambda_handler(event, context):
     if method == "OPTIONS":
         return _resp(200, {})
 
+    log.info(json.dumps({"event": "request", "method": method, "path": path}))
+
     if path == "/health":
         return _resp(200, {"status": "ok"})
 
@@ -573,6 +609,7 @@ def lambda_handler(event, context):
                 return _post_register(conn, data)
             return _post_login(conn, data)
         except Exception as e:
+            log.error(json.dumps({"event": "unhandled_error", "path": path, "error": str(e)}), exc_info=True)
             return _resp(500, {"error": str(e)})
         finally:
             conn.close()
@@ -633,5 +670,8 @@ def lambda_handler(event, context):
             return _post_resolve(conn, parts[1], data)
 
         return _resp(404, {"error": "not found"})
+    except Exception as e:
+        log.error(json.dumps({"event": "unhandled_error", "path": path, "error": str(e)}), exc_info=True)
+        return _resp(500, {"error": str(e)})
     finally:
         conn.close()
