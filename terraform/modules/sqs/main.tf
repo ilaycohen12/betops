@@ -44,3 +44,23 @@ resource "aws_iam_policy" "worker" {
 
   tags = var.tags
 }
+
+# ─── CLOUDWATCH ALARM ──────────────────────────────────────────────────────
+resource "aws_cloudwatch_metric_alarm" "dlq_messages" {
+  alarm_name          = "${var.project}-dlq-messages"
+  alarm_description   = "Messages in DLQ — worker is failing to process after 3 retries"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1
+  metric_name         = "ApproximateNumberOfMessagesVisible"
+  namespace           = "AWS/SQS"
+  period              = 300
+  statistic           = "Sum"
+  threshold           = 0
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    QueueName = aws_sqs_queue.dlq.name
+  }
+
+  tags = var.tags
+}
