@@ -95,3 +95,23 @@ resource "aws_lambda_function" "api" {
     ignore_changes = [filename, source_code_hash]
   }
 }
+
+# ─── CLOUDWATCH ALARM ──────────────────────────────────────────────────────
+resource "aws_cloudwatch_metric_alarm" "lambda_errors" {
+  alarm_name          = "${var.project}-lambda-errors"
+  alarm_description   = "Lambda error rate too high — check CloudWatch Logs for details"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1
+  metric_name         = "Errors"
+  namespace           = "AWS/Lambda"
+  period              = 300
+  statistic           = "Sum"
+  threshold           = 5
+  treat_missing_data  = "notBreaching"
+
+  dimensions = {
+    FunctionName = aws_lambda_function.api.function_name
+  }
+
+  tags = var.tags
+}
