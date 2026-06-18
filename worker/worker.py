@@ -9,12 +9,31 @@ import time
 
 import psycopg2
 import psycopg2.extras
+from prometheus_client import Counter, Histogram, start_http_server
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger(__name__)
 
 QUEUE_URL = os.environ.get("SQS_QUEUE_URL", "")
 LMSR_B = float(os.environ.get("LMSR_B", "100"))
+
+MESSAGES_PROCESSED = Counter(
+    "betops_messages_processed_total",
+    "SQS messages successfully processed",
+    ["event"],
+)
+MESSAGE_ERRORS = Counter(
+    "betops_message_errors_total",
+    "SQS messages that failed processing",
+)
+SETTLEMENT_DURATION = Histogram(
+    "betops_settlement_duration_seconds",
+    "Time taken to settle a market",
+)
+MARKETS_AUTO_CLOSED = Counter(
+    "betops_markets_auto_closed_total",
+    "Markets automatically closed due to expiry",
+)
 
 _shutdown = threading.Event()
 
@@ -57,7 +76,6 @@ def lmsr_price(q_yes: float, q_no: float, b: float = LMSR_B) -> float:
 
 
 def update_odds(conn, market_id: str):
-    """Recalculate and store market odds after a new bet."""
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
         cur.execute("""
             SELECT
@@ -76,47 +94,46 @@ def update_odds(conn, market_id: str):
 
 
 def settle_market(conn, market_id: str, result: str):
-    """Distribute the total pool to winners proportionally."""
-    with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-        cur.execute("""
-            UPDATE markets SET status = 'settled', result = %s
-            WHERE id = %s AND status IN ('open', 'closed')
-        """, (result, market_id))
-        if cur.rowcount == 0:
-            log.info("Market %s already settled, skipping", market_id)
-            conn.commit()
-            return
-
-        cur.execute("SELECT COALESCE(SUM(amount), 0) AS total FROM bets WHERE market_id = %s", (market_id,))
-        total_pool = float(cur.fetchone()["total"])
-
-        cur.execute("""
-            SELECT user_id, SUM(amount) AS stake
-            FROM bets WHERE market_id = %s AND side = %s
-            GROUP BY user_id
-        """, (market_id, result))
-        winners = cur.fetchall()
-
-        if not winners:
-            log.info("No winners for market %s", market_id)
-            conn.commit()
-            return
-
-        total_stake = sum(float(w["stake"]) for w in winners)
-        for w in winners:
-            payout = round((float(w["stake"]) / total_stake) * total_pool, 2)
-            cur.execute("UPDATE users SET balance = balance + %s WHERE id = %s", (payout, w["user_id"]))
+    with SETTLEMENT_DURATION.time():
+        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
             cur.execute("""
-                INSERT INTO transactions (user_id, amount, type, reference_id)
-                VALUES (%s, %s, 'payout', %s)
-            """, (w["user_id"], payout, market_id))
+                UPDATE markets SET status = 'settled', result = %s
+                WHERE id = %s AND status IN ('open', 'closed')
+            """, (result, market_id))
+            if cur.rowcount == 0:
+                log.info("Market %s already settled, skipping", market_id)
+                conn.commit()
+                return
 
-        conn.commit()
+            cur.execute("SELECT COALESCE(SUM(amount), 0) AS total FROM bets WHERE market_id = %s", (market_id,))
+            total_pool = float(cur.fetchone()["total"])
+
+            cur.execute("""
+                SELECT user_id, SUM(amount) AS stake
+                FROM bets WHERE market_id = %s AND side = %s
+                GROUP BY user_id
+            """, (market_id, result))
+            winners = cur.fetchall()
+
+            if not winners:
+                log.info("No winners for market %s", market_id)
+                conn.commit()
+                return
+
+            total_stake = sum(float(w["stake"]) for w in winners)
+            for w in winners:
+                payout = round((float(w["stake"]) / total_stake) * total_pool, 2)
+                cur.execute("UPDATE users SET balance = balance + %s WHERE id = %s", (payout, w["user_id"]))
+                cur.execute("""
+                    INSERT INTO transactions (user_id, amount, type, reference_id)
+                    VALUES (%s, %s, 'payout', %s)
+                """, (w["user_id"], payout, market_id))
+
+            conn.commit()
     log.info("Settled market=%s result=%s pool=$%.2f winners=%d", market_id, result, total_pool, len(winners))
 
 
 def close_expired_markets(conn):
-    """Mark markets past their closes_at as closed (awaiting resolution)."""
     with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
         cur.execute("""
             UPDATE markets SET status = 'closed'
@@ -126,6 +143,7 @@ def close_expired_markets(conn):
         expired = cur.fetchall()
         conn.commit()
     for m in expired:
+        MARKETS_AUTO_CLOSED.inc()
         log.info("Auto-closed expired market: %s (%s)", m["question"], m["id"])
 
 
@@ -138,9 +156,12 @@ def process_message(conn, message: dict):
         settle_market(conn, body["market_id"], body["result"])
     else:
         log.warning("Unknown event: %s", event)
+    MESSAGES_PROCESSED.labels(event=event or "unknown").inc()
 
 
 def main():
+    start_http_server(8000)
+    log.info("Prometheus metrics server started on :8000")
     sqs = get_sqs()
     log.info("Worker started, polling SQS...")
     iteration = 0
@@ -163,6 +184,7 @@ def main():
                             process_message(conn, msg)
                             sqs.delete_message(QueueUrl=QUEUE_URL, ReceiptHandle=msg["ReceiptHandle"])
                         except Exception as e:
+                            MESSAGE_ERRORS.inc()
                             log.error("Failed to process message: %s", e)
             finally:
                 conn.close()
