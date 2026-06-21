@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>betops — Infrastructure</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f0f2f5;padding:28px 20px;color:#1a1a2e}
+  h1{text-align:center;font-size:26px;font-weight:700;color:#1a1a2e;margin-bottom:6px}
+  .sub{text-align:center;color:#777;font-size:14px;margin-bottom:36px}
+  .card{background:#fff;border-radius:16px;box-shadow:0 2px 20px rgba(0,0,0,.08);padding:28px 32px;margin-bottom:36px}
+  .card-title{font-size:19px;font-weight:700;color:#1a237e;margin-bottom:4px}
+  .card-desc{font-size:13px;color:#666;margin-bottom:22px;line-height:1.5}
+  svg{width:100%;height:auto;display:block}
+  .warn{background:#fff3e0;border-left:4px solid #ff6f00;border-radius:8px;padding:14px 18px;margin-top:20px;font-size:13px;color:#e65100}
+  .warn strong{display:block;margin-bottom:4px}
+  .phases{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:36px}
+  .phase{background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,.06);border-left:5px solid}
+  .phase h3{font-size:14px;font-weight:700;margin-bottom:8px}
+  .phase p{font-size:13px;color:#555;line-height:1.6}
+  .p1{border-color:#ff6f00}.p2{border-color:#7b1fa2}.p3{border-color:#e64a00}.p4{border-color:#283593}
+  @media(max-width:700px){.phases{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<h1>betops — Infrastructure</h1>
+<p class="sub">Current state &amp; future roadmap — what you have and where you're going</p>
+
+<!-- ══════════════════════════════ CURRENT STATE ══════════════════════════════ -->
+<div class="card">
+  <div class="card-title">Current State</div>
+  <div class="card-desc">
+    Fully serverless AWS backend (Lambda + API Gateway) with a homelab k3s worker for async processing.
+    No custom domain. No GitOps. Raw <code>kubectl apply</code> from CI.
+  </div>
+
+<svg viewBox="0 0 1100 680" xmlns="http://www.w3.org/2000/svg" font-family="Arial,sans-serif" font-size="12">
+<defs>
+  <marker id="a"  markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#555"/></marker>
+  <marker id="ab" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#1565c0"/></marker>
+  <marker id="ar" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#b71c1c"/></marker>
+  <marker id="ao" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#e64a00"/></marker>
+</defs>
+
+<rect width="1100" height="680" fill="#f7f8fa"/>
+
+<!-- ── AWS CLOUD ── -->
+<rect x="5" y="42" width="618" height="525" rx="12" fill="#ddeeff" stroke="#1a73e8" stroke-width="2"/>
+<text x="22" y="65" font-size="14" font-weight="bold" fill="#0d47a1">☁  AWS Cloud  (us-east-1)</text>
+
+<!-- User -->
+<rect x="12" y="80" width="90" height="44" rx="6" fill="#fff" stroke="#9e9e9e" stroke-width="1.5"/>
+<text x="57" y="100" text-anchor="middle" font-weight="bold" fill="#333">👤 User</text>
+<text x="57" y="116" text-anchor="middle" fill="#888" font-size="10">Browser</text>
+
+<!-- CloudFront -->
+<rect x="130" y="80" width="145" height="44" rx="6" fill="#8e24aa" stroke="#6a1b9a" stroke-width="1.5"/>
+<text x="202" y="99" text-anchor="middle" font-weight="bold" fill="#fff">CloudFront</text>
+<text x="202" y="116" text-anchor="middle" fill="#e1bee7" font-size="10">*.cloudfront.net  (no custom domain)</text>
+
+<!-- S3 -->
+<rect x="310" y="80" width="130" height="44" rx="6" fill="#388e3c" stroke="#1b5e20" stroke-width="1.5"/>
+<text x="375" y="99" text-anchor="middle" font-weight="bold" fill="#fff">S3 Bucket</text>
+<text x="375" y="116" text-anchor="middle" fill="#c8e6c9" font-size="10">betops-frontend  (React SPA)</text>
+
+<!-- API Gateway -->
+<rect x="130" y="168" width="145" height="44" rx="6" fill="#e65100" stroke="#bf360c" stroke-width="1.5"/>
+<text x="202" y="187" text-anchor="middle" font-weight="bold" fill="#fff">API Gateway</text>
+<text x="202" y="204" text-anchor="middle" fill="#ffe0b2" font-size="10">HTTP API v2  (no custom domain)</text>
+
+<!-- Lambda -->
+<rect x="310" y="168" width="145" height="44" rx="6" fill="#f57f17" stroke="#e65100" stroke-width="1.5"/>
+<text x="382" y="187" text-anchor="middle" font-weight="bold" fill="#fff">Lambda</text>
+<text x="382" y="204" text-anchor="middle" fill="#fff8e1" font-size="10">betops-api  ·  Python 3.12  ·  30s timeout</text>
+
+<!-- VPC -->
+<rect x="14" y="238" width="600" height="310" rx="8" fill="none" stroke="#4285f4" stroke-width="1.5" stroke-dasharray="8,4"/>
+<text x="28" y="256" font-size="11" font-weight="bold" fill="#1565c0">VPC  10.0.0.0/16</text>
+
+<!-- RDS -->
+<rect x="26" y="268" width="155" height="72" rx="6" fill="#1565c0" stroke="#0d47a1" stroke-width="1.5"/>
+<text x="103" y="290" text-anchor="middle" font-weight="bold" fill="#fff">RDS Postgres 15</text>
+<text x="103" y="307" text-anchor="middle" fill="#bbdefb" font-size="10">db.t3.micro  ·  20 GB</text>
+<text x="103" y="322" text-anchor="middle" fill="#90caf9" font-size="10">10.0.3.228  (private VPC)</text>
+<text x="103" y="335" text-anchor="middle" fill="#ef9a9a" font-size="9">⚠ backup_retention = 0</text>
+
+<!-- SQS -->
+<rect x="200" y="268" width="130" height="72" rx="6" fill="#c62828" stroke="#b71c1c" stroke-width="1.5"/>
+<text x="265" y="290" text-anchor="middle" font-weight="bold" fill="#fff">SQS Queue</text>
+<text x="265" y="307" text-anchor="middle" fill="#ffcdd2" font-size="10">betops-queue</text>
+<text x="265" y="322" text-anchor="middle" fill="#ffcdd2" font-size="10">1 day retention</text>
+<text x="265" y="335" text-anchor="middle" fill="#ff8a80" font-size="10">→ DLQ after 3 fails</text>
+
+<!-- Secrets Manager -->
+<rect x="348" y="268" width="258" height="72" rx="6" fill="#546e7a" stroke="#37474f" stroke-width="1.5"/>
+<text x="477" y="290" text-anchor="middle" font-weight="bold" fill="#fff">Secrets Manager  (via VPC endpoint)</text>
+<text x="477" y="307" text-anchor="middle" fill="#cfd8dc" font-size="10">betops/db-credentials</text>
+<text x="477" y="322" text-anchor="middle" fill="#cfd8dc" font-size="10">betops/dev-db-credentials</text>
+
+<!-- EC2 Tailscale -->
+<rect x="26" y="365" width="215" height="68" rx="6" fill="#bf360c" stroke="#7f0000" stroke-width="2"/>
+<text x="133" y="387" text-anchor="middle" font-weight="bold" fill="#fff">EC2  t3.micro  (~$8/mo)</text>
+<text x="133" y="404" text-anchor="middle" fill="#ffccbc" font-size="10">Tailscale subnet router daemon</text>
+<text x="133" y="419" text-anchor="middle" fill="#ffccbc" font-size="10">Public subnet 10.0.1.0/24  ·  SSM access</text>
+<text x="133" y="430" text-anchor="middle" fill="#ff8a65" font-size="9">ONLY JOB: bridge AWS VPC ↔ homelab</text>
+
+<!-- VPC Endpoints -->
+<rect x="258" y="365" width="345" height="68" rx="6" fill="#78909c" stroke="#546e7a" stroke-width="1.5"/>
+<text x="430" y="387" text-anchor="middle" font-weight="bold" fill="#fff">VPC Interface Endpoints</text>
+<text x="430" y="404" text-anchor="middle" fill="#eceff1" font-size="10">SQS  —  Lambda uses this to send messages (not through EC2)</text>
+<text x="430" y="419" text-anchor="middle" fill="#eceff1" font-size="10">Secrets Manager  —  Lambda reads DB creds via this</text>
+
+<!-- Terraform footer inside AWS -->
+<rect x="14" y="452" width="600" height="40" rx="6" fill="#e8eaf6" stroke="#9fa8da" stroke-width="1"/>
+<text x="314" y="469" text-anchor="middle" fill="#283593" font-size="11" font-weight="bold">All AWS resources managed by Terraform 1.7  ·  state in S3</text>
+<text x="314" y="485" text-anchor="middle" fill="#3949ab" font-size="10">No custom domain  ·  No Route53  ·  Using raw AWS-generated URLs</text>
+
+<!-- ── HOMELAB ── -->
+<rect x="635" y="42" width="460" height="380" rx="12" fill="#e8f5e9" stroke="#388e3c" stroke-width="2"/>
+<text x="652" y="65" font-size="14" font-weight="bold" fill="#1b5e20">🏠 Homelab — Proxmox / k3s</text>
+<text x="652" y="82" font-size="10" fill="#2e7d32">worker-node01  ·  namespace: betops  ·  all pods pinned to this node</text>
+
+<!-- betops-worker -->
+<rect x="648" y="96" width="168" height="76" rx="6" fill="#00695c" stroke="#004d40" stroke-width="1.5"/>
+<text x="732" y="117" text-anchor="middle" font-weight="bold" fill="#fff">betops-worker</text>
+<text x="732" y="134" text-anchor="middle" fill="#b2dfdb" font-size="10">polls SQS  ·  LMSR odds recalc</text>
+<text x="732" y="149" text-anchor="middle" fill="#b2dfdb" font-size="10">settles markets  ·  :8080 metrics</text>
+<text x="732" y="164" text-anchor="middle" fill="#80cbc4" font-size="9">connects to AWS via Tailscale</text>
+
+<!-- postgres-exporter -->
+<rect x="648" y="186" width="168" height="76" rx="6" fill="#00695c" stroke="#004d40" stroke-width="1.5"/>
+<text x="732" y="207" text-anchor="middle" font-weight="bold" fill="#fff">postgres-exporter</text>
+<text x="732" y="224" text-anchor="middle" fill="#b2dfdb" font-size="10">reads RDS  →  Prometheus fmt</text>
+<text x="732" y="239" text-anchor="middle" fill="#b2dfdb" font-size="10">:9187  (hostNetwork)</text>
+<text x="732" y="254" text-anchor="middle" fill="#80cbc4" font-size="9">connects to RDS via Tailscale</text>
+
+<!-- sqs-exporter -->
+<rect x="648" y="276" width="168" height="76" rx="6" fill="#00695c" stroke="#004d40" stroke-width="1.5"/>
+<text x="732" y="297" text-anchor="middle" font-weight="bold" fill="#fff">sqs-exporter</text>
+<text x="732" y="314" text-anchor="middle" fill="#b2dfdb" font-size="10">SQS queue depth metrics</text>
+<text x="732" y="329" text-anchor="middle" fill="#b2dfdb" font-size="10">:8000</text>
+<text x="732" y="344" text-anchor="middle" fill="#80cbc4" font-size="9">AWS SDK via Tailscale</text>
+
+<!-- alloy -->
+<rect x="830" y="96" width="255" height="76" rx="6" fill="#e64a00" stroke="#bf360c" stroke-width="1.5"/>
+<text x="957" y="117" text-anchor="middle" font-weight="bold" fill="#fff">Grafana Alloy</text>
+<text x="957" y="134" text-anchor="middle" fill="#ffe0cc" font-size="10">scrapes all 3 pods  every 30s</text>
+<text x="957" y="149" text-anchor="middle" fill="#ffe0cc" font-size="10">collects pod logs (betops ns)</text>
+<text x="957" y="164" text-anchor="middle" fill="#ffccaa" font-size="9">pushes → Grafana Cloud</text>
+
+<!-- ClusterIP note -->
+<rect x="648" y="366" width="436" height="44" rx="6" fill="#c8e6c9" stroke="#81c784" stroke-width="1.2"/>
+<text x="866" y="384" text-anchor="middle" fill="#1b5e20" font-size="11" font-weight="bold">All k8s Services: ClusterIP  —  internal only, no external access</text>
+<text x="866" y="401" text-anchor="middle" fill="#2e7d32" font-size="10">worker-metrics :8080  ·  postgres-exporter :9187  ·  sqs-exporter :8000</text>
+
+<!-- Grafana Cloud -->
+<rect x="635" y="434" width="460" height="72" rx="12" fill="#fff8f5" stroke="#f46800" stroke-width="2"/>
+<text x="865" y="460" text-anchor="middle" font-size="14" font-weight="bold" fill="#e64a00">Grafana Cloud  (hosted)</text>
+<text x="865" y="479" text-anchor="middle" fill="#bf360c" font-size="11">Prometheus metrics  +  Loki logs  ·  betops Worker dashboard</text>
+<text x="865" y="496" text-anchor="middle" fill="#e64a00" font-size="10">grafana.net  ·  free tier  ·  Alloy pushes here</text>
+
+<!-- GitHub Actions -->
+<rect x="635" y="520" width="460" height="108" rx="12" fill="#24292e" stroke="#444" stroke-width="1.5"/>
+<text x="865" y="543" text-anchor="middle" font-weight="bold" fill="#fff" font-size="13">GitHub Actions  (9 workflows)</text>
+<text x="865" y="561" text-anchor="middle" fill="#8b949e" font-size="10">terraform → all AWS infra</text>
+<text x="865" y="577" text-anchor="middle" fill="#8b949e" font-size="10">deploy-frontend → npm build → S3 upload → CloudFront invalidation</text>
+<text x="865" y="593" text-anchor="middle" fill="#8b949e" font-size="10">deploy-lambda → pytest → zip → Lambda update</text>
+<text x="865" y="609" text-anchor="middle" fill="#8b949e" font-size="10">deploy-worker → pytest → build Docker → push GHCR → <tspan fill="#f85149">kubectl apply</tspan></text>
+<text x="865" y="621" text-anchor="middle" fill="#6e7681" font-size="9">⚡ Tailscale VPN used in CI runner to reach k3s  ·  K3S_KUBECONFIG secret</text>
+
+<!-- ── ARROWS ── -->
+
+<!-- User → CloudFront -->
+<line x1="102" y1="102" x2="130" y2="102" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+
+<!-- CloudFront → S3 -->
+<line x1="275" y1="94" x2="310" y2="94" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+<text x="292" y="88" text-anchor="middle" fill="#555" font-size="9">static</text>
+
+<!-- CloudFront → API GW -->
+<line x1="202" y1="124" x2="202" y2="168" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+<text x="218" y="152" fill="#555" font-size="9">API req</text>
+
+<!-- API GW → Lambda -->
+<line x1="275" y1="190" x2="310" y2="190" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+
+<!-- Lambda → RDS -->
+<line x1="352" y1="212" x2="128" y2="268" stroke="#1976d2" stroke-width="1.8" marker-end="url(#ab)"/>
+<text x="210" y="234" text-anchor="middle" fill="#1976d2" font-size="9">read/write</text>
+
+<!-- Lambda → SQS -->
+<line x1="382" y1="212" x2="295" y2="268" stroke="#c62828" stroke-width="1.8" marker-end="url(#ar)"/>
+<text x="360" y="248" fill="#c62828" font-size="9">publish event</text>
+
+<!-- Lambda → Secrets Manager (dashed) -->
+<line x1="440" y1="190" x2="477" y2="268" stroke="#546e7a" stroke-width="1" stroke-dasharray="5,3" marker-end="url(#a)"/>
+<text x="490" y="230" fill="#546e7a" font-size="9">read creds</text>
+
+<!-- Tailscale VPN: EC2 ↔ Homelab -->
+<line x1="241" y1="399" x2="635" y2="224" stroke="#1565c0" stroke-width="3" stroke-dasharray="11,6" marker-end="url(#ab)"/>
+<line x1="635" y1="230" x2="241" y2="405" stroke="#1565c0" stroke-width="1.5" stroke-dasharray="11,6" marker-end="url(#ab)" opacity="0.45"/>
+<text x="415" y="296" text-anchor="middle" fill="#1565c0" font-size="12" font-weight="bold">Tailscale  WireGuard  VPN</text>
+<text x="415" y="312" text-anchor="middle" fill="#1565c0" font-size="10">(bidirectional)</text>
+
+<!-- Alloy scrapes pods -->
+<line x1="830" y1="130" x2="816" y2="130" stroke="#e64a00" stroke-width="1.5" marker-end="url(#ao)"/>
+<line x1="830" y1="155" x2="816" y2="220" stroke="#e64a00" stroke-width="1.2" marker-end="url(#ao)"/>
+<line x1="830" y1="175" x2="816" y2="310" stroke="#e64a00" stroke-width="1.2" marker-end="url(#ao)"/>
+<text x="824" y="120" text-anchor="middle" fill="#e64a00" font-size="9">scrape</text>
+
+<!-- Alloy → Grafana Cloud -->
+<line x1="957" y1="172" x2="870" y2="434" stroke="#e64a00" stroke-width="2" marker-end="url(#ao)"/>
+<text x="990" y="310" fill="#e64a00" font-size="10">push</text>
+<text x="990" y="324" fill="#e64a00" font-size="10">metrics + logs</text>
+
+<!-- GitHub Actions → k3s -->
+<line x1="760" y1="520" x2="740" y2="410" stroke="#aaa" stroke-width="1.2" stroke-dasharray="5,3" marker-end="url(#a)"/>
+<text x="725" y="475" fill="#aaa" font-size="9">kubectl apply</text>
+
+<!-- Legend -->
+<rect x="5" y="638" width="620" height="36" rx="4" fill="#fff" stroke="#ddd" stroke-width="1"/>
+<text x="15" y="652" fill="#777" font-size="10" font-weight="bold">Legend:</text>
+<line x1="68" y1="649" x2="100" y2="649" stroke="#555" stroke-width="1.5"/><text x="105" y="652" fill="#555" font-size="10">direct request</text>
+<line x1="198" y1="649" x2="230" y2="649" stroke="#555" stroke-width="1" stroke-dasharray="4,3"/><text x="235" y="652" fill="#555" font-size="10">via endpoint/indirect</text>
+<line x1="340" y1="649" x2="372" y2="649" stroke="#1565c0" stroke-width="3" stroke-dasharray="11,6"/><text x="377" y="652" fill="#1565c0" font-size="10">Tailscale WireGuard VPN</text>
+<line x1="510" y1="649" x2="542" y2="649" stroke="#e64a00" stroke-width="2"/><text x="547" y="652" fill="#e64a00" font-size="10">Alloy scrape/push</text>
+<text x="15" y="668" fill="#c62828" font-size="10">⚠  RDS has no backups (backup_retention=0) and no deletion protection — fix before anything else</text>
+</svg>
+</div>
+
+<!-- ══════════════════════════════ PHASES ══════════════════════════════ -->
+<div class="phases">
+  <div class="phase p1">
+    <h3>Phase 1 — Custom Domain</h3>
+    <p>
+      Add Route53 hosted zone + ACM certificate.<br>
+      Wire <strong>yourdomain.com → CloudFront</strong> (frontend) and <strong>api.yourdomain.com → API Gateway</strong>.<br>
+      Terraform changes: <code>aws_route53_zone</code>, <code>aws_acm_certificate</code>, update CloudFront aliases + API GW custom domain.
+    </p>
+  </div>
+  <div class="phase p2">
+    <h3>Phase 2 — Helm Charts</h3>
+    <p>
+      Convert raw <code>worker/k8s/</code> and <code>observability/k8s/</code> manifests into Helm charts under <code>helm/</code>.<br>
+      Templates for image tag, namespace, secrets. Prerequisite for ArgoCD.<br>
+      Structure: <code>helm/worker/</code>, <code>helm/observability/</code>, <code>helm/grafana/</code>, <code>helm/argocd/</code>
+    </p>
+  </div>
+  <div class="phase p3">
+    <h3>Phase 3 — Grafana in k3s + Ingress</h3>
+    <p>
+      Deploy Grafana + Prometheus in k3s (Helm charts).<br>
+      k3s already ships <strong>Traefik</strong> — no ingress controller to install.<br>
+      Add Ingress routing <code>dashboard.yourdomain.com → Grafana:3000</code>.<br>
+      Use <strong>Tailscale Funnel</strong> for external HTTPS access (no public IP needed).
+    </p>
+  </div>
+  <div class="phase p4">
+    <h3>Phase 4 — ArgoCD (GitOps)</h3>
+    <p>
+      Deploy ArgoCD in k3s. It watches the repo's <code>helm/</code> dir and auto-syncs on every push.<br>
+      Remove <code>kubectl apply</code> from GitHub Actions — CI only builds and pushes images.<br>
+      Expose ArgoCD UI at <code>argocd.yourdomain.com</code> via Traefik + Tailscale Funnel.
+    </p>
+  </div>
+</div>
+
+<!-- ══════════════════════════════ FUTURE STATE ══════════════════════════════ -->
+<div class="card">
+  <div class="card-title">Future State  (after all 4 phases)</div>
+  <div class="card-desc">
+    Custom domain, self-hosted Grafana, Helm charts, ArgoCD GitOps.
+    <span style="color:#ff8f00;font-weight:600">★ Gold = new component</span> &nbsp;
+    <span style="color:#2e7d32;font-weight:600">■ Green = unchanged</span> &nbsp;
+    <span style="color:#c62828;font-weight:600">✓ Red strikethrough = removed/replaced</span>
+  </div>
+
+<svg viewBox="0 0 1100 720" xmlns="http://www.w3.org/2000/svg" font-family="Arial,sans-serif" font-size="12">
+<defs>
+  <marker id="a2"  markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#555"/></marker>
+  <marker id="ab2" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#1565c0"/></marker>
+  <marker id="ao2" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#e64a00"/></marker>
+  <marker id="ap2" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#6a1b9a"/></marker>
+  <marker id="ag2" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#2e7d32"/></marker>
+</defs>
+
+<rect width="1100" height="720" fill="#f7f8fa"/>
+
+<!-- ── AWS CLOUD ── -->
+<rect x="5" y="42" width="458" height="550" rx="12" fill="#ddeeff" stroke="#1a73e8" stroke-width="2"/>
+<text x="22" y="65" font-size="14" font-weight="bold" fill="#0d47a1">☁  AWS Cloud  (us-east-1)</text>
+
+<!-- Route53 NEW -->
+<rect x="15" y="78" width="200" height="60" rx="6" fill="#ff8f00" stroke="#e65100" stroke-width="2.5"/>
+<text x="115" y="97" text-anchor="middle" font-size="9" fill="#fff3e0">★  NEW</text>
+<text x="115" y="112" text-anchor="middle" font-weight="bold" fill="#fff">Route53</text>
+<text x="115" y="128" text-anchor="middle" fill="#fff3e0" font-size="10">yourdomain.com hosted zone</text>
+
+<!-- ACM NEW -->
+<rect x="230" y="78" width="220" height="60" rx="6" fill="#ff8f00" stroke="#e65100" stroke-width="2.5"/>
+<text x="340" y="97" text-anchor="middle" font-size="9" fill="#fff3e0">★  NEW</text>
+<text x="340" y="112" text-anchor="middle" font-weight="bold" fill="#fff">ACM Certificate</text>
+<text x="340" y="128" text-anchor="middle" fill="#fff3e0" font-size="10">*.yourdomain.com  (us-east-1)</text>
+
+<!-- CloudFront -->
+<rect x="15" y="170" width="140" height="44" rx="6" fill="#8e24aa" stroke="#6a1b9a" stroke-width="1.5"/>
+<text x="85" y="189" text-anchor="middle" font-weight="bold" fill="#fff">CloudFront</text>
+<text x="85" y="206" text-anchor="middle" fill="#e1bee7" font-size="10">yourdomain.com  ✓ custom domain</text>
+
+<!-- S3 -->
+<rect x="175" y="170" width="140" height="44" rx="6" fill="#388e3c" stroke="#1b5e20" stroke-width="1.5"/>
+<text x="245" y="189" text-anchor="middle" font-weight="bold" fill="#fff">S3 Bucket</text>
+<text x="245" y="206" text-anchor="middle" fill="#c8e6c9" font-size="10">betops-frontend  (unchanged)</text>
+
+<!-- User arrow area -->
+<rect x="330" y="170" width="120" height="44" rx="6" fill="#fff" stroke="#9e9e9e" stroke-width="1.5"/>
+<text x="390" y="192" text-anchor="middle" font-weight="bold" fill="#333">👤 User</text>
+<text x="390" y="207" text-anchor="middle" fill="#888" font-size="10">→ yourdomain.com</text>
+
+<!-- API GW -->
+<rect x="15" y="252" width="140" height="44" rx="6" fill="#e65100" stroke="#bf360c" stroke-width="1.5"/>
+<text x="85" y="271" text-anchor="middle" font-weight="bold" fill="#fff">API Gateway</text>
+<text x="85" y="288" text-anchor="middle" fill="#ffe0b2" font-size="10">api.yourdomain.com  ✓</text>
+
+<!-- Lambda -->
+<rect x="175" y="252" width="140" height="44" rx="6" fill="#f57f17" stroke="#e65100" stroke-width="1.5"/>
+<text x="245" y="271" text-anchor="middle" font-weight="bold" fill="#fff">Lambda</text>
+<text x="245" y="288" text-anchor="middle" fill="#fff8e1" font-size="10">betops-api  (unchanged)</text>
+
+<!-- VPC -->
+<rect x="14" y="320" width="440" height="255" rx="8" fill="none" stroke="#4285f4" stroke-width="1.5" stroke-dasharray="8,4"/>
+<text x="28" y="338" font-size="11" font-weight="bold" fill="#1565c0">VPC  10.0.0.0/16</text>
+
+<!-- RDS FIXED -->
+<rect x="24" y="352" width="175" height="68" rx="6" fill="#1565c0" stroke="#ff8f00" stroke-width="2.5"/>
+<text x="111" y="371" text-anchor="middle" font-weight="bold" fill="#fff">RDS Postgres 15</text>
+<text x="111" y="388" text-anchor="middle" fill="#bbdefb" font-size="10">db.t3.micro  ·  20 GB</text>
+<text x="111" y="403" text-anchor="middle" fill="#ffe082" font-size="9">★  backup_retention = 7</text>
+<text x="111" y="416" text-anchor="middle" fill="#ffe082" font-size="9">★  deletion_protection = true</text>
+
+<!-- SQS -->
+<rect x="215" y="352" width="230" height="68" rx="6" fill="#c62828" stroke="#b71c1c" stroke-width="1.5"/>
+<text x="330" y="374" text-anchor="middle" font-weight="bold" fill="#fff">SQS Queue + DLQ</text>
+<text x="330" y="391" text-anchor="middle" fill="#ffcdd2" font-size="10">betops-queue  (unchanged)</text>
+
+<!-- EC2 Tailscale -->
+<rect x="24" y="440" width="180" height="62" rx="6" fill="#bf360c" stroke="#7f0000" stroke-width="1.5"/>
+<text x="114" y="461" text-anchor="middle" font-weight="bold" fill="#fff">EC2  t3.micro</text>
+<text x="114" y="477" text-anchor="middle" fill="#ffccbc" font-size="10">Tailscale router  (unchanged)</text>
+<text x="114" y="492" text-anchor="middle" fill="#ff8a65" font-size="9">still just the VPN bridge</text>
+
+<!-- Secrets + Endpoints -->
+<rect x="220" y="440" width="225" height="62" rx="6" fill="#546e7a" stroke="#37474f" stroke-width="1.5"/>
+<text x="332" y="461" text-anchor="middle" font-weight="bold" fill="#fff">Secrets Manager + VPC Endpoints</text>
+<text x="332" y="478" text-anchor="middle" fill="#eceff1" font-size="10">unchanged</text>
+
+<!-- Terraform -->
+<rect x="14" y="518" width="440" height="40" rx="6" fill="#e8eaf6" stroke="#9fa8da" stroke-width="1"/>
+<text x="234" y="536" text-anchor="middle" fill="#283593" font-size="11" font-weight="bold">Terraform manages all AWS resources  ·  state in S3</text>
+<text x="234" y="552" text-anchor="middle" fill="#3949ab" font-size="10">★  Add: Route53 zone, ACM cert, CloudFront alias, API GW custom domain</text>
+
+<!-- ── HOMELAB FUTURE ── -->
+<rect x="473" y="42" width="622" height="630" rx="12" fill="#e8f5e9" stroke="#388e3c" stroke-width="2"/>
+<text x="490" y="65" font-size="14" font-weight="bold" fill="#1b5e20">🏠 Homelab — Proxmox / k3s  (worker-node01)</text>
+
+<!-- Traefik Ingress NEW -->
+<rect x="483" y="78" width="602" height="52" rx="6" fill="#ad1457" stroke="#880e4f" stroke-width="2.5"/>
+<text x="784" y="97" text-anchor="middle" font-size="9" fill="#fce4ec">★  NEW  (k3s ships Traefik built-in — just configure it)</text>
+<text x="784" y="114" text-anchor="middle" font-weight="bold" fill="#fff" font-size="12">Traefik Ingress  +  Tailscale Funnel  (external HTTPS)</text>
+<text x="784" y="127" text-anchor="middle" fill="#fce4ec" font-size="10">dashboard.yourdomain.com → Grafana:3000  ·  argocd.yourdomain.com → ArgoCD:8080</text>
+
+<!-- Helm banner -->
+<rect x="483" y="142" width="602" height="24" rx="4" fill="#ede7f6" stroke="#b39ddb" stroke-width="1.2"/>
+<text x="784" y="158" text-anchor="middle" fill="#4a148c" font-size="10" font-weight="bold">★  All pods managed as Helm charts  —  helm/worker/  helm/observability/  helm/grafana/  helm/argocd/</text>
+
+<!-- ── EXISTING PODS (unchanged) ── -->
+<text x="490" y="186" font-size="10" fill="#2e7d32" font-weight="bold">Existing  (unchanged)</text>
+
+<!-- betops-worker -->
+<rect x="483" y="196" width="162" height="75" rx="6" fill="#00695c" stroke="#004d40" stroke-width="1.5"/>
+<text x="564" y="216" text-anchor="middle" font-weight="bold" fill="#fff">betops-worker</text>
+<text x="564" y="233" text-anchor="middle" fill="#b2dfdb" font-size="10">polls SQS · LMSR odds</text>
+<text x="564" y="249" text-anchor="middle" fill="#b2dfdb" font-size="10">settles markets · :8080</text>
+<text x="564" y="263" text-anchor="middle" fill="#80cbc4" font-size="9">via Tailscale</text>
+
+<!-- postgres-exporter -->
+<rect x="483" y="284" width="162" height="75" rx="6" fill="#00695c" stroke="#004d40" stroke-width="1.5"/>
+<text x="564" y="304" text-anchor="middle" font-weight="bold" fill="#fff">postgres-exporter</text>
+<text x="564" y="321" text-anchor="middle" fill="#b2dfdb" font-size="10">RDS metrics :9187</text>
+<text x="564" y="337" text-anchor="middle" fill="#80cbc4" font-size="9">via Tailscale</text>
+
+<!-- sqs-exporter -->
+<rect x="483" y="372" width="162" height="75" rx="6" fill="#00695c" stroke="#004d40" stroke-width="1.5"/>
+<text x="564" y="392" text-anchor="middle" font-weight="bold" fill="#fff">sqs-exporter</text>
+<text x="564" y="409" text-anchor="middle" fill="#b2dfdb" font-size="10">SQS metrics :8000</text>
+<text x="564" y="425" text-anchor="middle" fill="#80cbc4" font-size="9">AWS SDK</text>
+
+<!-- ── NEW PODS ── -->
+<text x="660" y="186" font-size="10" fill="#ff8f00" font-weight="bold">★  New</text>
+
+<!-- Prometheus NEW -->
+<rect x="660" y="196" width="162" height="75" rx="6" fill="#bf360c" stroke="#ff8f00" stroke-width="2.5"/>
+<text x="741" y="213" text-anchor="middle" font-size="9" fill="#ffe082">★  NEW</text>
+<text x="741" y="229" text-anchor="middle" font-weight="bold" fill="#fff">Prometheus</text>
+<text x="741" y="246" text-anchor="middle" fill="#ffccbc" font-size="10">local metrics storage</text>
+<text x="741" y="262" text-anchor="middle" fill="#ffccbc" font-size="9">replaces Grafana Cloud</text>
+
+<!-- Grafana NEW -->
+<rect x="660" y="284" width="162" height="75" rx="6" fill="#e64a00" stroke="#ff8f00" stroke-width="2.5"/>
+<text x="741" y="301" text-anchor="middle" font-size="9" fill="#ffe082">★  NEW</text>
+<text x="741" y="317" text-anchor="middle" font-weight="bold" fill="#fff">Grafana</text>
+<text x="741" y="334" text-anchor="middle" fill="#ffe0cc" font-size="10">self-hosted in k3s</text>
+<text x="741" y="350" text-anchor="middle" fill="#ffccaa" font-size="9">dashboard.yourdomain.com</text>
+
+<!-- ArgoCD NEW -->
+<rect x="660" y="372" width="162" height="75" rx="6" fill="#6a1b9a" stroke="#ff8f00" stroke-width="2.5"/>
+<text x="741" y="389" text-anchor="middle" font-size="9" fill="#ffe082">★  NEW</text>
+<text x="741" y="405" text-anchor="middle" font-weight="bold" fill="#fff">ArgoCD</text>
+<text x="741" y="422" text-anchor="middle" fill="#e1bee7" font-size="10">GitOps controller</text>
+<text x="741" y="438" text-anchor="middle" fill="#ce93d8" font-size="9">argocd.yourdomain.com</text>
+
+<!-- Alloy (updated) -->
+<rect x="838" y="196" width="248" height="75" rx="6" fill="#e64a00" stroke="#bf360c" stroke-width="1.5"/>
+<text x="962" y="216" text-anchor="middle" font-weight="bold" fill="#fff">Grafana Alloy</text>
+<text x="962" y="233" text-anchor="middle" fill="#ffe0cc" font-size="10">scrapes all pods  every 30s</text>
+<text x="962" y="249" text-anchor="middle" fill="#ffe0cc" font-size="10">→ pushes to local Prometheus</text>
+<text x="962" y="264" text-anchor="middle" fill="#ffccaa" font-size="9">(no longer to Grafana Cloud)</text>
+
+<!-- ClusterIP note -->
+<rect x="483" y="460" width="602" height="36" rx="6" fill="#c8e6c9" stroke="#81c784" stroke-width="1.2"/>
+<text x="784" y="477" text-anchor="middle" fill="#1b5e20" font-size="11" font-weight="bold">ClusterIP services unchanged  ·  Grafana + ArgoCD exposed via Traefik Ingress + Tailscale Funnel</text>
+<text x="784" y="491" text-anchor="middle" fill="#2e7d32" font-size="10">Tailscale Funnel = public HTTPS on your Tailscale node  —  no LoadBalancer, no public IP required</text>
+
+<!-- Git repo -->
+<rect x="483" y="510" width="602" height="36" rx="6" fill="#e8eaf6" stroke="#3f51b5" stroke-width="1.5"/>
+<text x="784" y="527" text-anchor="middle" fill="#283593" font-size="11" font-weight="bold">ilaycohen12/betops  —  ArgoCD watches main branch</text>
+<text x="784" y="543" text-anchor="middle" fill="#3949ab" font-size="10">push to main → ArgoCD detects Helm chart change → kubectl apply (internally)</text>
+
+<!-- GitHub Actions UPDATED -->
+<rect x="483" y="560" width="602" height="100" rx="12" fill="#24292e" stroke="#444" stroke-width="1.5"/>
+<text x="784" y="582" text-anchor="middle" font-weight="bold" fill="#fff" font-size="13">GitHub Actions  (updated)</text>
+<text x="784" y="600" text-anchor="middle" fill="#8b949e" font-size="10">terraform → AWS infra  ·  deploy-frontend → S3 + CloudFront</text>
+<text x="784" y="616" text-anchor="middle" fill="#4caf50" font-size="10">★  deploy-worker → pytest → build image → push GHCR  (that's it, ArgoCD handles the rest)</text>
+<text x="784" y="632" text-anchor="middle" fill="#4caf50" font-size="10">★  deploy-observability → build sqs-exporter → push GHCR  (ArgoCD syncs automatically)</text>
+<text x="784" y="648" text-anchor="middle" fill="#f85149" font-size="10" text-decoration="line-through">removed: kubectl apply steps — GitOps takes over</text>
+
+<!-- GHCR -->
+<rect x="483" y="672" width="602" height="36" rx="6" fill="#161b22" stroke="#30363d" stroke-width="1.5"/>
+<text x="784" y="688" text-anchor="middle" font-weight="bold" fill="#fff">GHCR  (ghcr.io/ilaycohen12)</text>
+<text x="784" y="702" text-anchor="middle" fill="#8b949e" font-size="10">betops-worker  ·  betops-sqs-exporter  ·  GHA builds &amp; pushes  →  ArgoCD pulls on deploy</text>
+
+<!-- ── ARROWS FUTURE ── -->
+
+<!-- User → Route53 → CF -->
+<line x1="390" y1="192" x2="215" y2="192" stroke="#555" stroke-width="1.5" marker-end="url(#a2)"/>
+<line x1="115" y1="170" x2="115" y2="138" stroke="#ff8f00" stroke-width="1.5" marker-end="url(#a2)"/>
+<text x="253" y="188" fill="#555" font-size="9">DNS</text>
+
+<!-- CF → S3 -->
+<line x1="155" y1="183" x2="175" y2="183" stroke="#555" stroke-width="1.5" marker-end="url(#a2)"/>
+
+<!-- CF → API GW -->
+<line x1="85" y1="214" x2="85" y2="252" stroke="#555" stroke-width="1.5" marker-end="url(#a2)"/>
+<text x="100" y="237" fill="#555" font-size="9">API req</text>
+
+<!-- API GW → Lambda -->
+<line x1="155" y1="274" x2="175" y2="274" stroke="#555" stroke-width="1.5" marker-end="url(#a2)"/>
+
+<!-- Lambda → RDS -->
+<line x1="215" y1="296" x2="155" y2="352" stroke="#1976d2" stroke-width="1.8" marker-end="url(#ab2)"/>
+
+<!-- Lambda → SQS -->
+<line x1="275" y1="296" x2="320" y2="352" stroke="#c62828" stroke-width="1.8" marker-end="url(#a2)"/>
+
+<!-- Tailscale VPN -->
+<line x1="204" y1="471" x2="473" y2="318" stroke="#1565c0" stroke-width="3" stroke-dasharray="11,6" marker-end="url(#ab2)"/>
+<line x1="473" y1="324" x2="204" y2="477" stroke="#1565c0" stroke-width="1.5" stroke-dasharray="11,6" marker-end="url(#ab2)" opacity="0.4"/>
+<text x="330" y="385" text-anchor="middle" fill="#1565c0" font-size="11" font-weight="bold">Tailscale VPN</text>
+
+<!-- ArgoCD syncs pods -->
+<line x1="660" y1="405" x2="645" y2="395" stroke="#6a1b9a" stroke-width="1.5" marker-end="url(#ap2)"/>
+<line x1="660" y1="410" x2="645" y2="318" stroke="#6a1b9a" stroke-width="1.2" marker-end="url(#ap2)"/>
+<line x1="660" y1="415" x2="645" y2="230" stroke="#6a1b9a" stroke-width="1.2" marker-end="url(#ap2)"/>
+<text x="650" y="300" fill="#6a1b9a" font-size="9">sync</text>
+
+<!-- ArgoCD → git repo -->
+<line x1="741" y1="447" x2="741" y2="510" stroke="#6a1b9a" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#ap2)"/>
+<text x="757" y="483" fill="#6a1b9a" font-size="9">watches</text>
+
+<!-- Alloy → Prometheus (NEW direction) -->
+<line x1="838" y1="230" x2="822" y2="230" stroke="#e64a00" stroke-width="1.5" marker-end="url(#ao2)"/>
+<text x="830" y="222" fill="#e64a00" font-size="9" text-anchor="middle">scrape</text>
+<line x1="838" y1="250" x2="822" y2="320" stroke="#e64a00" stroke-width="1.2" marker-end="url(#ao2)"/>
+<line x1="838" y1="270" x2="822" y2="408" stroke="#e64a00" stroke-width="1.2" marker-end="url(#ao2)"/>
+
+<!-- Alloy → Prometheus pod -->
+<line x1="838" y1="235" x2="822" y2="235" stroke="#e64a00" stroke-width="1.8" marker-end="url(#ao2)"/>
+<line x1="868" y1="271" x2="822" y2="245" stroke="#e64a00" stroke-width="1.8" marker-end="url(#ao2)"/>
+<text x="862" y="269" fill="#e64a00" font-size="9">push</text>
+
+<!-- Prometheus → Grafana -->
+<line x1="741" y1="271" x2="741" y2="284" stroke="#e64a00" stroke-width="1.5" marker-end="url(#ao2)"/>
+<text x="757" y="280" fill="#e64a00" font-size="9">datasource</text>
+
+<!-- GHA → GHCR -->
+<line x1="784" y1="660" x2="784" y2="672" stroke="#aaa" stroke-width="1.2" marker-end="url(#a2)"/>
+
+<!-- Traefik → Grafana + ArgoCD -->
+<line x1="741" y1="130" x2="741" y2="284" stroke="#ad1457" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#a2)"/>
+<line x1="784" y1="130" x2="784" y2="372" stroke="#ad1457" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#a2)"/>
+</svg>
+
+  <div class="warn">
+    <strong>⚠  Fix before anything else (2 lines of Terraform)</strong>
+    <code>backup_retention_period = 7</code> and <code>deletion_protection = true</code> in <code>terraform/modules/rds/main.tf</code>.
+    Right now prod has zero RDS backups and no deletion protection.
+  </div>
+</div>
+
+</body>
+</html>
