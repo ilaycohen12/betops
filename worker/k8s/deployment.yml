@@ -12,10 +12,6 @@ spec:
     metadata:
       labels:
         app: betops-worker
-      annotations:
-        prometheus.io/scrape: "true"
-        prometheus.io/port: "8000"
-        prometheus.io/path: "/metrics"
     spec:
       hostNetwork: true
       dnsPolicy: Default
@@ -28,7 +24,7 @@ spec:
         - name: worker
           image: ghcr.io/ilaycohen12/betops-worker:latest
           ports:
-            - containerPort: 8000
+            - containerPort: 8080
               name: metrics
           env:
             - name: SQS_QUEUE_URL
