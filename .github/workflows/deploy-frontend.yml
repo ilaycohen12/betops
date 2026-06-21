@@ -34,7 +34,7 @@ jobs:
       - name: Build
         working-directory: frontend
         env:
-          VITE_API_URL: https://a85f5v24nb.execute-api.us-east-1.amazonaws.com
+          VITE_API_URL: https://api.betops.online
         run: npm run build
 
       - name: Deploy to S3
