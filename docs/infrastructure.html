@@ -521,5 +521,224 @@
   </div>
 </div>
 
+<!-- ══════════════════════════════ CI/CD DIAGRAM ══════════════════════════════ -->
+<div class="card">
+  <div class="card-title">CI / CD — Repos &amp; Workflows</div>
+  <div class="card-desc">
+    Two repos, 9 workflows. <strong>betops</strong> owns app code + image builds.
+    <strong>betops-infra</strong> owns Terraform + Helm charts.
+    The only link between them is <code>INFRA_REPO_PAT</code> — a token that lets betops CI commit tag bumps into betops-infra.
+  </div>
+
+<svg viewBox="0 0 1100 780" xmlns="http://www.w3.org/2000/svg" font-family="Arial,sans-serif" font-size="12">
+<defs>
+  <marker id="ca" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#555"/></marker>
+  <marker id="cb" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#6a1b9a"/></marker>
+  <marker id="cc" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#1565c0"/></marker>
+  <marker id="cd" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#e65100"/></marker>
+  <marker id="ce" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#2e7d32"/></marker>
+</defs>
+
+<rect width="1100" height="780" fill="#f7f8fa"/>
+
+<!-- ══ LEGEND ══ -->
+<rect x="10" y="10" width="680" height="28" rx="6" fill="#fff" stroke="#ddd" stroke-width="1"/>
+<rect x="20" y="19" width="12" height="12" rx="2" fill="#1565c0"/><text x="37" y="29" fill="#333" font-size="10">push to main</text>
+<rect x="115" y="19" width="12" height="12" rx="2" fill="#7b1fa2"/><text x="132" y="29" fill="#333" font-size="10">push to main/dev</text>
+<rect x="230" y="19" width="12" height="12" rx="2" fill="#37474f"/><text x="247" y="29" fill="#333" font-size="10">workflow_dispatch (manual)</text>
+<rect x="390" y="19" width="12" height="12" rx="2" fill="#bf360c"/><text x="407" y="29" fill="#333" font-size="10">push (any branch)</text>
+<line x1="510" y1="24" x2="545" y2="24" stroke="#6a1b9a" stroke-width="2" stroke-dasharray="5,3"/><text x="550" y="29" fill="#6a1b9a" font-size="10">cross-repo (PAT)</text>
+<line x1="640" y1="24" x2="675" y2="24" stroke="#1565c0" stroke-width="2"/><text x="678" y="29" fill="#1565c0" font-size="10">deploys to</text>
+
+<!-- ══ BETOPS REPO ══ -->
+<rect x="10" y="50" width="520" height="700" rx="14" fill="#e3f2fd" stroke="#1565c0" stroke-width="2.5"/>
+<rect x="10" y="50" width="520" height="42" rx="14" fill="#1565c0"/>
+<rect x="10" y="78" width="520" height="14" fill="#1565c0"/>
+<text x="270" y="78" text-anchor="middle" font-size="15" font-weight="bold" fill="#fff">ilaycohen12 / betops</text>
+<text x="270" y="92" text-anchor="middle" font-size="10" fill="#90caf9">app code · lambdas · worker · frontend · sqs-exporter</text>
+
+<!-- ── test.yml ── -->
+<rect x="24" y="108" width="492" height="68" rx="8" fill="#fff" stroke="#7b1fa2" stroke-width="1.8"/>
+<rect x="24" y="108" width="8" height="68" rx="4" fill="#7b1fa2"/>
+<text x="44" y="125" font-weight="bold" fill="#4a148c" font-size="11">test.yml</text>
+<rect x="430" y="113" width="80" height="16" rx="4" fill="#ede7f6"/>
+<text x="470" y="124" text-anchor="middle" fill="#6a1b9a" font-size="9">push main/dev</text>
+<text x="44" y="141" fill="#555" font-size="10">trigger: <tspan fill="#7b1fa2">lambdas/**  or  worker/**</tspan></text>
+<text x="44" y="156" fill="#555" font-size="10">test-lambda: pytest lambdas/api/  ·  test-worker: pytest worker/</text>
+<text x="44" y="169" fill="#888" font-size="9">parallel jobs · coverage report · blocks deploy if failing</text>
+
+<!-- ── test-k3s.yml ── -->
+<rect x="24" y="186" width="492" height="68" rx="8" fill="#fff" stroke="#37474f" stroke-width="1.8"/>
+<rect x="24" y="186" width="8" height="68" rx="4" fill="#37474f"/>
+<text x="44" y="203" font-weight="bold" fill="#263238" font-size="11">test-k3s.yml</text>
+<rect x="415" y="191" width="95" height="16" rx="4" fill="#eceff1"/>
+<text x="462" y="202" text-anchor="middle" fill="#37474f" font-size="9">workflow_dispatch</text>
+<text x="44" y="219" fill="#555" font-size="10">connect to k3s via Tailscale  →  kubectl get nodes / pods</text>
+<text x="44" y="234" fill="#555" font-size="10">show worker pod status  ·  tail last 80 lines of worker logs</text>
+<text x="44" y="247" fill="#888" font-size="9">test RDS reachability from runner and from inside cluster pod</text>
+
+<!-- ── deploy-frontend.yml ── -->
+<rect x="24" y="264" width="492" height="68" rx="8" fill="#fff" stroke="#1565c0" stroke-width="1.8"/>
+<rect x="24" y="264" width="8" height="68" rx="4" fill="#1565c0"/>
+<text x="44" y="281" font-weight="bold" fill="#0d47a1" font-size="11">deploy-frontend.yml</text>
+<rect x="430" y="269" width="80" height="16" rx="4" fill="#e3f2fd"/>
+<text x="470" y="280" text-anchor="middle" fill="#1565c0" font-size="9">push main</text>
+<text x="44" y="297" fill="#555" font-size="10">trigger: <tspan fill="#1565c0">frontend/**</tspan></text>
+<text x="44" y="312" fill="#555" font-size="10">npm install  →  vite build  →  aws s3 sync  →  CloudFront invalidation</text>
+<text x="44" y="325" fill="#888" font-size="9">prints live URL to job summary</text>
+
+<!-- ── deploy-lambda.yml ── -->
+<rect x="24" y="342" width="492" height="68" rx="8" fill="#fff" stroke="#e65100" stroke-width="1.8"/>
+<rect x="24" y="342" width="8" height="68" rx="4" fill="#e65100"/>
+<text x="44" y="359" font-weight="bold" fill="#bf360c" font-size="11">deploy-lambda.yml</text>
+<rect x="430" y="347" width="80" height="16" rx="4" fill="#fff3e0"/>
+<text x="470" y="358" text-anchor="middle" fill="#e65100" font-size="9">push main</text>
+<text x="44" y="375" fill="#555" font-size="10">trigger: <tspan fill="#e65100">lambdas/**</tspan></text>
+<text x="44" y="390" fill="#555" font-size="10">pytest  →  zip bundle  →  aws lambda update-function-code  →  wait for update</text>
+<text x="44" y="403" fill="#888" font-size="9">prints function name · code size · last modified</text>
+
+<!-- ── deploy-worker.yml ── -->
+<rect x="24" y="420" width="492" height="84" rx="8" fill="#fff" stroke="#2e7d32" stroke-width="1.8"/>
+<rect x="24" y="420" width="8" height="84" rx="4" fill="#2e7d32"/>
+<text x="44" y="437" font-weight="bold" fill="#1b5e20" font-size="11">deploy-worker.yml</text>
+<rect x="430" y="425" width="80" height="16" rx="4" fill="#e8f5e9"/>
+<text x="470" y="436" text-anchor="middle" fill="#2e7d32" font-size="9">push main</text>
+<text x="44" y="453" fill="#555" font-size="10">trigger: <tspan fill="#2e7d32">worker/**</tspan></text>
+<text x="44" y="468" fill="#555" font-size="10">pytest  →  docker build  →  push <tspan font-weight="bold">ghcr.io/ilaycohen12/betops-worker:sha-XXXXXXX</tspan></text>
+<text x="44" y="483" fill="#555" font-size="10">checkout betops-infra (INFRA_REPO_PAT)  →  sed values.yaml  →  git commit + push</text>
+<text x="44" y="496" fill="#888" font-size="9">commit msg: "chore: bump worker to sha-XXXXXXX"  ·  triggers terraform.yml in betops-infra</text>
+
+<!-- ── deploy-observability.yml ── -->
+<rect x="24" y="514" width="492" height="84" rx="8" fill="#fff" stroke="#2e7d32" stroke-width="1.8"/>
+<rect x="24" y="514" width="8" height="84" rx="4" fill="#2e7d32"/>
+<text x="44" y="531" font-weight="bold" fill="#1b5e20" font-size="11">deploy-observability.yml</text>
+<rect x="430" y="519" width="80" height="16" rx="4" fill="#e8f5e9"/>
+<text x="470" y="530" text-anchor="middle" fill="#2e7d32" font-size="9">push main</text>
+<text x="44" y="547" fill="#555" font-size="10">trigger: <tspan fill="#2e7d32">observability/**</tspan></text>
+<text x="44" y="562" fill="#555" font-size="10">docker build  →  push <tspan font-weight="bold">ghcr.io/ilaycohen12/betops-sqs-exporter:sha-XXXXXXX</tspan></text>
+<text x="44" y="577" fill="#555" font-size="10">checkout betops-infra (INFRA_REPO_PAT)  →  sed values.yaml  →  git commit + push</text>
+<text x="44" y="590" fill="#888" font-size="9">commit msg: "chore: bump sqs-exporter to sha-XXXXXXX"</text>
+
+<!-- secrets box betops -->
+<rect x="24" y="610" width="492" height="50" rx="8" fill="#fce4ec" stroke="#c2185b" stroke-width="1.2"/>
+<text x="270" y="630" text-anchor="middle" font-weight="bold" fill="#880e4f" font-size="11">Secrets in betops</text>
+<text x="270" y="647" text-anchor="middle" fill="#c2185b" font-size="10">AWS_ACCESS_KEY_ID  ·  AWS_SECRET_ACCESS_KEY  ·  INFRA_REPO_PAT  ·  GHCR_PAT  ·  DB_HOST  ·  DB_PASSWORD  ·  SQS_QUEUE_URL  ·  JWT_SECRET  ·  K3S_KUBECONFIG  ·  TAILSCALE_AUTH_KEY</text>
+
+<!-- GHCR box -->
+<rect x="24" y="672" width="492" height="46" rx="8" fill="#161b22" stroke="#30363d" stroke-width="1.5"/>
+<text x="270" y="691" text-anchor="middle" font-weight="bold" fill="#fff" font-size="11">GHCR  —  ghcr.io/ilaycohen12</text>
+<text x="270" y="708" text-anchor="middle" fill="#8b949e" font-size="10">betops-worker:sha-XXXXXXX  ·  betops-sqs-exporter:sha-XXXXXXX  ·  also tagged :latest</text>
+
+<!-- ══ BETOPS-INFRA REPO ══ -->
+<rect x="570" y="50" width="520" height="700" rx="14" fill="#f3e5f5" stroke="#6a1b9a" stroke-width="2.5"/>
+<rect x="570" y="50" width="520" height="42" rx="14" fill="#6a1b9a"/>
+<rect x="570" y="78" width="520" height="14" fill="#6a1b9a"/>
+<text x="830" y="78" text-anchor="middle" font-size="15" font-weight="bold" fill="#fff">ilaycohen12 / betops-infra</text>
+<text x="830" y="92" text-anchor="middle" font-size="10" fill="#ce93d8">Terraform · Helm charts · infra workflows</text>
+
+<!-- ── terraform.yml ── -->
+<rect x="584" y="108" width="492" height="100" rx="8" fill="#fff" stroke="#7b1fa2" stroke-width="1.8"/>
+<rect x="584" y="108" width="8" height="100" rx="4" fill="#7b1fa2"/>
+<text x="604" y="125" font-weight="bold" fill="#4a148c" font-size="11">terraform.yml</text>
+<rect x="990" y="113" width="80" height="16" rx="4" fill="#ede7f6"/>
+<text x="1030" y="124" text-anchor="middle" fill="#6a1b9a" font-size="9">push main/dev</text>
+<text x="604" y="141" fill="#555" font-size="10">trigger: <tspan fill="#7b1fa2">terraform/**</tspan>  ·  also: tag bump commit from betops triggers this</text>
+<text x="604" y="156" fill="#555" font-size="10">set-env (main=prod / dev=dev)  →  lint (tflint)  →  plan  →  apply</text>
+<text x="604" y="171" fill="#555" font-size="10">on PR: posts plan diff as comment  ·  apply only on push</text>
+<text x="604" y="186" fill="#888" font-size="9">state in s3://betops-terraform-state  ·  manages all AWS resources</text>
+<text x="604" y="199" fill="#888" font-size="9">import existing IAM roles on apply (idempotent)</text>
+
+<!-- ── migrate.yml ── -->
+<rect x="584" y="218" width="492" height="84" rx="8" fill="#fff" stroke="#37474f" stroke-width="1.8"/>
+<rect x="584" y="218" width="8" height="84" rx="4" fill="#37474f"/>
+<text x="604" y="235" font-weight="bold" fill="#263238" font-size="11">migrate.yml</text>
+<rect x="975" y="223" width="95" height="16" rx="4" fill="#eceff1"/>
+<text x="1022" y="234" text-anchor="middle" fill="#37474f" font-size="9">workflow_dispatch</text>
+<text x="604" y="251" fill="#555" font-size="10">inputs: environment (prod/dev)  ·  action (migrate/seed)</text>
+<text x="604" y="266" fill="#555" font-size="10">invokes betops-api Lambda with <tspan font-family="monospace">{"action":"migrate"}</tspan></text>
+<text x="604" y="281" fill="#555" font-size="10">dev: resolves betops/dev-db-credentials ARN first  →  passes to Lambda</text>
+<text x="604" y="294" fill="#888" font-size="9">prints Lambda response JSON</text>
+
+<!-- ── restart-tailscale.yml ── -->
+<rect x="584" y="312" width="492" height="84" rx="8" fill="#fff" stroke="#bf360c" stroke-width="1.8"/>
+<rect x="584" y="312" width="8" height="84" rx="4" fill="#bf360c"/>
+<text x="604" y="329" font-weight="bold" fill="#7f0000" font-size="11">restart-tailscale.yml</text>
+<rect x="975" y="317" width="95" height="16" rx="4" fill="#fbe9e7"/>
+<text x="1022" y="328" text-anchor="middle" fill="#bf360c" font-size="9">workflow_dispatch</text>
+<text x="604" y="345" fill="#555" font-size="10">terraform init  →  terraform apply -replace EC2 instance</text>
+<text x="604" y="360" fill="#555" font-size="10">force-replaces the Tailscale EC2 (new ephemeral key, re-registers with Tailscale)</text>
+<text x="604" y="375" fill="#555" font-size="10">prints new instance public IP / DNS</text>
+<text x="604" y="388" fill="#888" font-size="9">use when Tailscale VPN drops or EC2 gets stuck</text>
+
+<!-- Helm charts box -->
+<rect x="584" y="406" width="492" height="110" rx="8" fill="#fff" stroke="#6a1b9a" stroke-width="1.5"/>
+<rect x="584" y="406" width="8" height="110" rx="4" fill="#6a1b9a"/>
+<text x="604" y="423" font-weight="bold" fill="#4a148c" font-size="11">helm/  —  Helm charts  (ArgoCD will watch these)</text>
+<text x="604" y="441" fill="#555" font-size="10">helm/worker/values.yaml  ←  image.tag bumped by deploy-worker.yml</text>
+<text x="604" y="456" fill="#555" font-size="10">helm/observability/values.yaml  ←  sqsExporter.image.tag bumped by deploy-observability.yml</text>
+<text x="604" y="475" fill="#888" font-size="10">templates/deployment.yml uses {{ .Values.image.tag }} — the only templated field</text>
+<text x="604" y="490" fill="#888" font-size="10">currently applied manually (kubectl / ArgoCD Phase 4)</text>
+<text x="604" y="505" fill="#6a1b9a" font-size="9" font-weight="bold">charts: helm/worker/  ·  helm/observability/</text>
+
+<!-- secrets box betops-infra -->
+<rect x="584" y="528" width="492" height="50" rx="8" fill="#fce4ec" stroke="#c2185b" stroke-width="1.2"/>
+<text x="830" y="548" text-anchor="middle" font-weight="bold" fill="#880e4f" font-size="11">Secrets in betops-infra</text>
+<text x="830" y="565" text-anchor="middle" fill="#c2185b" font-size="10">AWS_ACCESS_KEY_ID  ·  AWS_SECRET_ACCESS_KEY  ·  TAILSCALE_AUTH_KEY  ·  JWT_SECRET</text>
+
+<!-- AWS targets -->
+<rect x="584" y="590" width="230" height="46" rx="8" fill="#fff8e1" stroke="#f57f17" stroke-width="1.5"/>
+<text x="699" y="609" text-anchor="middle" font-weight="bold" fill="#e65100" font-size="11">AWS  (us-east-1)</text>
+<text x="699" y="626" text-anchor="middle" fill="#e65100" font-size="10">Lambda  ·  RDS  ·  S3  ·  CloudFront  ·  SQS  ·  EC2</text>
+
+<!-- k3s target -->
+<rect x="846" y="590" width="230" height="46" rx="8" fill="#e8f5e9" stroke="#388e3c" stroke-width="1.5"/>
+<text x="961" y="609" text-anchor="middle" font-weight="bold" fill="#1b5e20" font-size="11">k3s  (homelab)</text>
+<text x="961" y="626" text-anchor="middle" fill="#2e7d32" font-size="10">betops-worker  ·  alloy  ·  exporters</text>
+
+<!-- terraform state -->
+<rect x="584" y="648" width="492" height="46" rx="8" fill="#e8eaf6" stroke="#3f51b5" stroke-width="1.5"/>
+<text x="830" y="667" text-anchor="middle" font-weight="bold" fill="#283593" font-size="11">Terraform State  —  S3</text>
+<text x="830" y="684" text-anchor="middle" fill="#3949ab" font-size="10">s3://betops-terraform-state  ·  shared between prod and dev envs</text>
+
+<!-- ══ CROSS-REPO ARROWS ══ -->
+
+<!-- deploy-worker → betops-infra (tag bump) -->
+<path d="M 516 462 C 545 462 545 220 570 220" fill="none" stroke="#6a1b9a" stroke-width="2.5" stroke-dasharray="8,4" marker-end="url(#cb)"/>
+<rect x="523" y="330" width="46" height="30" rx="4" fill="#ede7f6"/>
+<text x="546" y="343" text-anchor="middle" fill="#6a1b9a" font-size="9" font-weight="bold">PAT</text>
+<text x="546" y="355" text-anchor="middle" fill="#6a1b9a" font-size="8">tag bump</text>
+
+<!-- deploy-observability → betops-infra (tag bump) -->
+<path d="M 516 556 C 548 556 548 240 570 240" fill="none" stroke="#6a1b9a" stroke-width="2" stroke-dasharray="8,4" marker-end="url(#cb)"/>
+
+<!-- deploy-worker/obs → GHCR -->
+<line x1="270" y1="718" x2="270" y2="740" stroke="#555" stroke-width="1.5" marker-end="url(#ca)"/>
+<rect x="200" y="730" width="140" height="18" rx="4" fill="#f5f5f5"/>
+<text x="270" y="743" text-anchor="middle" fill="#555" font-size="9">docker push</text>
+
+<!-- terraform.yml → AWS -->
+<line x1="699" y1="590" x2="699" y2="636" stroke="#e65100" stroke-width="1.8" marker-end="url(#cd)"/>
+
+<!-- migrate.yml → AWS (Lambda) -->
+<line x1="750" y1="302" x2="720" y2="590" stroke="#37474f" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#ca)"/>
+
+<!-- restart-tailscale → AWS (EC2) -->
+<line x1="790" y1="396" x2="740" y2="590" stroke="#bf360c" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#ca)"/>
+
+<!-- helm → k3s (future ArgoCD) -->
+<line x1="961" y1="516" x2="961" y2="590" stroke="#6a1b9a" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#cb)"/>
+<text x="975" y="557" fill="#6a1b9a" font-size="9">ArgoCD (Phase 4)</text>
+
+<!-- deploy-frontend → S3/CF (AWS) -->
+<line x1="270" y1="332" x2="450" y2="332" stroke="#1565c0" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#cc)"/>
+<text x="360" y="326" text-anchor="middle" fill="#1565c0" font-size="9">S3 + CloudFront</text>
+
+<!-- deploy-lambda → Lambda -->
+<line x1="410" y1="410" x2="460" y2="410" stroke="#e65100" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#cd)"/>
+<text x="435" y="404" text-anchor="middle" fill="#e65100" font-size="9">Lambda</text>
+
+</svg>
+</div>
+
 </body>
 </html>
