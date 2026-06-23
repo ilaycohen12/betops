@@ -5,738 +5,497 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>betops — Infrastructure</title>
 <style>
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f0f2f5;padding:28px 20px;color:#1a1a2e}
-  h1{text-align:center;font-size:26px;font-weight:700;color:#1a1a2e;margin-bottom:6px}
-  .sub{text-align:center;color:#777;font-size:14px;margin-bottom:36px}
-  .card{background:#fff;border-radius:16px;box-shadow:0 2px 20px rgba(0,0,0,.08);padding:28px 32px;margin-bottom:36px}
-  .card-title{font-size:19px;font-weight:700;color:#1a237e;margin-bottom:4px}
-  .card-desc{font-size:13px;color:#666;margin-bottom:22px;line-height:1.5}
-  svg{width:100%;height:auto;display:block}
-  .warn{background:#fff3e0;border-left:4px solid #ff6f00;border-radius:8px;padding:14px 18px;margin-top:20px;font-size:13px;color:#e65100}
-  .warn strong{display:block;margin-bottom:4px}
-  .phases{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:36px}
-  .phase{background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,.06);border-left:5px solid}
-  .phase h3{font-size:14px;font-weight:700;margin-bottom:8px}
-  .phase p{font-size:13px;color:#555;line-height:1.6}
-  .p1{border-color:#ff6f00}.p2{border-color:#7b1fa2}.p3{border-color:#e64a00}.p4{border-color:#283593}
-  @media(max-width:700px){.phases{grid-template-columns:1fr}}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#f0f2f5;padding:28px 20px;color:#1a1a2e}
+h1{text-align:center;font-size:26px;font-weight:700;color:#1a1a2e;margin-bottom:6px}
+.sub{text-align:center;color:#777;font-size:14px;margin-bottom:36px}
+.card{background:#fff;border-radius:16px;box-shadow:0 2px 20px rgba(0,0,0,.08);padding:28px 32px;margin-bottom:36px}
+.card-title{font-size:19px;font-weight:700;color:#1a237e;margin-bottom:4px}
+.card-desc{font-size:13px;color:#666;margin-bottom:22px;line-height:1.5}
+svg{width:100%;height:auto;display:block}
+.phases{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:36px}
+.phase{background:#fff;border-radius:12px;padding:20px;box-shadow:0 2px 12px rgba(0,0,0,.06);border-left:5px solid}
+.phase h3{font-size:14px;font-weight:700;margin-bottom:8px}
+.phase p{font-size:13px;color:#555;line-height:1.6}
+@media(max-width:700px){.phases{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 
 <h1>betops — Infrastructure</h1>
-<p class="sub">Current state &amp; future roadmap — what you have and where you're going</p>
+<p class="sub">Current state &amp; roadmap · updated 2026-06-22</p>
 
-<!-- ══════════════════════════════ CURRENT STATE ══════════════════════════════ -->
+<!-- ══════════════════ CURRENT STATE ══════════════════ -->
 <div class="card">
   <div class="card-title">Current State</div>
   <div class="card-desc">
-    Fully serverless AWS backend (Lambda + API Gateway) with a homelab k3s worker for async processing.
-    Custom domain <strong>betops.online</strong> live — Route53 + ACM + CloudFront alias + API Gateway custom domain.
-    Terraform + Helm charts in <strong>betops-infra</strong>. CI bumps image tags — no more raw <code>kubectl apply</code>.
+    Serverless AWS backend · custom domain <strong>betops.online</strong> live (Route53 ✅ + ACM + CloudFront) ·
+    homelab k3s worker for async bet processing · Grafana Cloud for observability ·
+    <strong>ArgoCD installing on k3s — CRDs applied, pods stabilising (Phase 4 in progress).</strong>
   </div>
 
-<svg viewBox="0 0 1100 680" xmlns="http://www.w3.org/2000/svg" font-family="Arial,sans-serif" font-size="12">
+<!--
+  Color theme by service type:
+    DNS/CDN   : #6a1b9a (purple)
+    Compute   : #1565c0 (blue)     — API GW, Lambda, Worker
+    Storage   : #00695c (teal)     — S3
+    Queue     : #00695c (teal)     — SQS
+    Database  : #0d47a1 (dark blue)— RDS
+    Network   : #37474f (slate)    — EC2 / Tailscale
+    Monitoring: #e65100 (orange)   — exporters, Alloy
+    External  : #bf360c (dark red) — Grafana Cloud
+    CI/CD     : #263238 (near-black)
+    User      : #546e7a (gray)
+-->
+<svg viewBox="0 0 960 458" xmlns="http://www.w3.org/2000/svg" font-family="Arial,sans-serif" font-size="12">
 <defs>
-  <marker id="a"  markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#555"/></marker>
-  <marker id="ab" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#1565c0"/></marker>
-  <marker id="ar" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#b71c1c"/></marker>
-  <marker id="ao" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#e64a00"/></marker>
+  <marker id="a"  markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#555"/></marker>
+  <marker id="ab" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#1565c0"/></marker>
+  <marker id="ao" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#e65100"/></marker>
+  <marker id="ap" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#4527a0"/></marker>
 </defs>
-
-<rect width="1100" height="680" fill="#f7f8fa"/>
-
-<!-- ── AWS CLOUD ── -->
-<rect x="5" y="42" width="618" height="525" rx="12" fill="#ddeeff" stroke="#1a73e8" stroke-width="2"/>
-<text x="22" y="65" font-size="14" font-weight="bold" fill="#0d47a1">☁  AWS Cloud  (us-east-1)</text>
-
-<!-- User -->
-<rect x="12" y="80" width="90" height="44" rx="6" fill="#fff" stroke="#9e9e9e" stroke-width="1.5"/>
-<text x="57" y="100" text-anchor="middle" font-weight="bold" fill="#333">👤 User</text>
-<text x="57" y="116" text-anchor="middle" fill="#888" font-size="10">Browser</text>
-
-<!-- CloudFront -->
-<rect x="130" y="80" width="145" height="44" rx="6" fill="#8e24aa" stroke="#6a1b9a" stroke-width="1.5"/>
-<text x="202" y="99" text-anchor="middle" font-weight="bold" fill="#fff">CloudFront</text>
-<text x="202" y="116" text-anchor="middle" fill="#e1bee7" font-size="10">betops.online  ✅ custom domain live</text>
-
-<!-- S3 -->
-<rect x="310" y="80" width="130" height="44" rx="6" fill="#388e3c" stroke="#1b5e20" stroke-width="1.5"/>
-<text x="375" y="99" text-anchor="middle" font-weight="bold" fill="#fff">S3 Bucket</text>
-<text x="375" y="116" text-anchor="middle" fill="#c8e6c9" font-size="10">betops-frontend  (React SPA)</text>
-
-<!-- API Gateway -->
-<rect x="130" y="168" width="145" height="44" rx="6" fill="#e65100" stroke="#bf360c" stroke-width="1.5"/>
-<text x="202" y="187" text-anchor="middle" font-weight="bold" fill="#fff">API Gateway</text>
-<text x="202" y="204" text-anchor="middle" fill="#ffe0b2" font-size="10">api.betops.online  ✅ custom domain live</text>
-
-<!-- Lambda -->
-<rect x="310" y="168" width="145" height="44" rx="6" fill="#f57f17" stroke="#e65100" stroke-width="1.5"/>
-<text x="382" y="187" text-anchor="middle" font-weight="bold" fill="#fff">Lambda</text>
-<text x="382" y="204" text-anchor="middle" fill="#fff8e1" font-size="10">betops-api  ·  Python 3.12  ·  30s timeout</text>
-
-<!-- VPC -->
-<rect x="14" y="238" width="600" height="310" rx="8" fill="none" stroke="#4285f4" stroke-width="1.5" stroke-dasharray="8,4"/>
-<text x="28" y="256" font-size="11" font-weight="bold" fill="#1565c0">VPC  10.0.0.0/16</text>
-
-<!-- RDS -->
-<rect x="26" y="268" width="155" height="72" rx="6" fill="#1565c0" stroke="#0d47a1" stroke-width="1.5"/>
-<text x="103" y="290" text-anchor="middle" font-weight="bold" fill="#fff">RDS Postgres 15</text>
-<text x="103" y="307" text-anchor="middle" fill="#bbdefb" font-size="10">db.t3.micro  ·  20 GB</text>
-<text x="103" y="322" text-anchor="middle" fill="#90caf9" font-size="10">10.0.3.228  (private VPC)</text>
-<text x="103" y="335" text-anchor="middle" fill="#ffe082" font-size="9">deletion_protection=true  ·  backups: free tier limit</text>
-
-<!-- SQS -->
-<rect x="200" y="268" width="130" height="72" rx="6" fill="#c62828" stroke="#b71c1c" stroke-width="1.5"/>
-<text x="265" y="290" text-anchor="middle" font-weight="bold" fill="#fff">SQS Queue</text>
-<text x="265" y="307" text-anchor="middle" fill="#ffcdd2" font-size="10">betops-queue</text>
-<text x="265" y="322" text-anchor="middle" fill="#ffcdd2" font-size="10">1 day retention</text>
-<text x="265" y="335" text-anchor="middle" fill="#ff8a80" font-size="10">→ DLQ after 3 fails</text>
-
-<!-- Secrets Manager -->
-<rect x="348" y="268" width="258" height="72" rx="6" fill="#546e7a" stroke="#37474f" stroke-width="1.5"/>
-<text x="477" y="290" text-anchor="middle" font-weight="bold" fill="#fff">Secrets Manager  (via VPC endpoint)</text>
-<text x="477" y="307" text-anchor="middle" fill="#cfd8dc" font-size="10">betops/db-credentials</text>
-<text x="477" y="322" text-anchor="middle" fill="#cfd8dc" font-size="10">betops/dev-db-credentials</text>
-
-<!-- EC2 Tailscale -->
-<rect x="26" y="365" width="215" height="68" rx="6" fill="#bf360c" stroke="#7f0000" stroke-width="2"/>
-<text x="133" y="387" text-anchor="middle" font-weight="bold" fill="#fff">EC2  t3.micro  (~$8/mo)</text>
-<text x="133" y="404" text-anchor="middle" fill="#ffccbc" font-size="10">Tailscale subnet router daemon</text>
-<text x="133" y="419" text-anchor="middle" fill="#ffccbc" font-size="10">Public subnet 10.0.1.0/24  ·  SSM access</text>
-<text x="133" y="430" text-anchor="middle" fill="#ff8a65" font-size="9">ONLY JOB: bridge AWS VPC ↔ homelab</text>
-
-<!-- VPC Endpoints -->
-<rect x="258" y="365" width="345" height="68" rx="6" fill="#78909c" stroke="#546e7a" stroke-width="1.5"/>
-<text x="430" y="387" text-anchor="middle" font-weight="bold" fill="#fff">VPC Interface Endpoints</text>
-<text x="430" y="404" text-anchor="middle" fill="#eceff1" font-size="10">SQS  —  Lambda uses this to send messages (not through EC2)</text>
-<text x="430" y="419" text-anchor="middle" fill="#eceff1" font-size="10">Secrets Manager  —  Lambda reads DB creds via this</text>
-
-<!-- Terraform footer inside AWS -->
-<rect x="14" y="452" width="600" height="40" rx="6" fill="#e8eaf6" stroke="#9fa8da" stroke-width="1"/>
-<text x="314" y="469" text-anchor="middle" fill="#283593" font-size="11" font-weight="bold">Terraform 1.7 in ilaycohen12/betops-infra  ·  state in S3</text>
-<text x="314" y="485" text-anchor="middle" fill="#3949ab" font-size="10">Route53 + ACM + CloudFront alias + API GW custom domain  ✅ live</text>
-
-<!-- ── HOMELAB ── -->
-<rect x="635" y="42" width="460" height="380" rx="12" fill="#e8f5e9" stroke="#388e3c" stroke-width="2"/>
-<text x="652" y="65" font-size="14" font-weight="bold" fill="#1b5e20">🏠 Homelab — Proxmox / k3s</text>
-<text x="652" y="82" font-size="10" fill="#2e7d32">worker-node01  ·  namespace: betops  ·  all pods pinned to this node</text>
-
-<!-- betops-worker -->
-<rect x="648" y="96" width="168" height="76" rx="6" fill="#00695c" stroke="#004d40" stroke-width="1.5"/>
-<text x="732" y="117" text-anchor="middle" font-weight="bold" fill="#fff">betops-worker</text>
-<text x="732" y="134" text-anchor="middle" fill="#b2dfdb" font-size="10">polls SQS  ·  LMSR odds recalc</text>
-<text x="732" y="149" text-anchor="middle" fill="#b2dfdb" font-size="10">settles markets  ·  :8080 metrics</text>
-<text x="732" y="164" text-anchor="middle" fill="#80cbc4" font-size="9">connects to AWS via Tailscale</text>
-
-<!-- postgres-exporter -->
-<rect x="648" y="186" width="168" height="76" rx="6" fill="#00695c" stroke="#004d40" stroke-width="1.5"/>
-<text x="732" y="207" text-anchor="middle" font-weight="bold" fill="#fff">postgres-exporter</text>
-<text x="732" y="224" text-anchor="middle" fill="#b2dfdb" font-size="10">reads RDS  →  Prometheus fmt</text>
-<text x="732" y="239" text-anchor="middle" fill="#b2dfdb" font-size="10">:9187  (hostNetwork)</text>
-<text x="732" y="254" text-anchor="middle" fill="#80cbc4" font-size="9">connects to RDS via Tailscale</text>
-
-<!-- sqs-exporter -->
-<rect x="648" y="276" width="168" height="76" rx="6" fill="#00695c" stroke="#004d40" stroke-width="1.5"/>
-<text x="732" y="297" text-anchor="middle" font-weight="bold" fill="#fff">sqs-exporter</text>
-<text x="732" y="314" text-anchor="middle" fill="#b2dfdb" font-size="10">SQS queue depth metrics</text>
-<text x="732" y="329" text-anchor="middle" fill="#b2dfdb" font-size="10">:8000</text>
-<text x="732" y="344" text-anchor="middle" fill="#80cbc4" font-size="9">AWS SDK via Tailscale</text>
-
-<!-- alloy -->
-<rect x="830" y="96" width="255" height="76" rx="6" fill="#e64a00" stroke="#bf360c" stroke-width="1.5"/>
-<text x="957" y="117" text-anchor="middle" font-weight="bold" fill="#fff">Grafana Alloy</text>
-<text x="957" y="134" text-anchor="middle" fill="#ffe0cc" font-size="10">scrapes all 3 pods  every 30s</text>
-<text x="957" y="149" text-anchor="middle" fill="#ffe0cc" font-size="10">collects pod logs (betops ns)</text>
-<text x="957" y="164" text-anchor="middle" fill="#ffccaa" font-size="9">pushes → Grafana Cloud</text>
-
-<!-- ClusterIP note -->
-<rect x="648" y="366" width="436" height="44" rx="6" fill="#c8e6c9" stroke="#81c784" stroke-width="1.2"/>
-<text x="866" y="384" text-anchor="middle" fill="#1b5e20" font-size="11" font-weight="bold">All k8s Services: ClusterIP  —  internal only, no external access</text>
-<text x="866" y="401" text-anchor="middle" fill="#2e7d32" font-size="10">worker-metrics :8080  ·  postgres-exporter :9187  ·  sqs-exporter :8000</text>
-
-<!-- Grafana Cloud -->
-<rect x="635" y="434" width="460" height="72" rx="12" fill="#fff8f5" stroke="#f46800" stroke-width="2"/>
-<text x="865" y="460" text-anchor="middle" font-size="14" font-weight="bold" fill="#e64a00">Grafana Cloud  (hosted)</text>
-<text x="865" y="479" text-anchor="middle" fill="#bf360c" font-size="11">Prometheus metrics  +  Loki logs  ·  betops Worker dashboard</text>
-<text x="865" y="496" text-anchor="middle" fill="#e64a00" font-size="10">grafana.net  ·  free tier  ·  Alloy pushes here</text>
-
-<!-- GitHub Actions -->
-<rect x="635" y="520" width="460" height="108" rx="12" fill="#24292e" stroke="#444" stroke-width="1.5"/>
-<text x="865" y="543" text-anchor="middle" font-weight="bold" fill="#fff" font-size="13">GitHub Actions  (betops repo — 6 workflows)</text>
-<text x="865" y="561" text-anchor="middle" fill="#8b949e" font-size="10">deploy-frontend → npm build → S3 upload → CloudFront invalidation</text>
-<text x="865" y="577" text-anchor="middle" fill="#8b949e" font-size="10">deploy-lambda → pytest → zip → Lambda update</text>
-<text x="865" y="593" text-anchor="middle" fill="#4caf50" font-size="10">deploy-worker → pytest → build Docker → push GHCR → bump tag in betops-infra</text>
-<text x="865" y="609" text-anchor="middle" fill="#4caf50" font-size="10">deploy-observability → build sqs-exporter → push GHCR → bump tag in betops-infra</text>
-<text x="865" y="621" text-anchor="middle" fill="#6e7681" font-size="9">betops-infra has terraform, migrate, restart-tailscale workflows  ·  INFRA_REPO_PAT links repos</text>
-
-<!-- ── ARROWS ── -->
-
-<!-- User → CloudFront -->
-<line x1="102" y1="102" x2="130" y2="102" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
-
-<!-- CloudFront → S3 -->
-<line x1="275" y1="94" x2="310" y2="94" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
-<text x="292" y="88" text-anchor="middle" fill="#555" font-size="9">static</text>
-
-<!-- CloudFront → API GW -->
-<line x1="202" y1="124" x2="202" y2="168" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
-<text x="218" y="152" fill="#555" font-size="9">API req</text>
-
-<!-- API GW → Lambda -->
-<line x1="275" y1="190" x2="310" y2="190" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
-
-<!-- Lambda → RDS -->
-<line x1="352" y1="212" x2="128" y2="268" stroke="#1976d2" stroke-width="1.8" marker-end="url(#ab)"/>
-<text x="210" y="234" text-anchor="middle" fill="#1976d2" font-size="9">read/write</text>
-
-<!-- Lambda → SQS -->
-<line x1="382" y1="212" x2="295" y2="268" stroke="#c62828" stroke-width="1.8" marker-end="url(#ar)"/>
-<text x="360" y="248" fill="#c62828" font-size="9">publish event</text>
-
-<!-- Lambda → Secrets Manager (dashed) -->
-<line x1="440" y1="190" x2="477" y2="268" stroke="#546e7a" stroke-width="1" stroke-dasharray="5,3" marker-end="url(#a)"/>
-<text x="490" y="230" fill="#546e7a" font-size="9">read creds</text>
-
-<!-- Tailscale VPN: EC2 ↔ Homelab -->
-<line x1="241" y1="399" x2="635" y2="224" stroke="#1565c0" stroke-width="3" stroke-dasharray="11,6" marker-end="url(#ab)"/>
-<line x1="635" y1="230" x2="241" y2="405" stroke="#1565c0" stroke-width="1.5" stroke-dasharray="11,6" marker-end="url(#ab)" opacity="0.45"/>
-<text x="415" y="296" text-anchor="middle" fill="#1565c0" font-size="12" font-weight="bold">Tailscale  WireGuard  VPN</text>
-<text x="415" y="312" text-anchor="middle" fill="#1565c0" font-size="10">(bidirectional)</text>
-
-<!-- Alloy scrapes pods -->
-<line x1="830" y1="130" x2="816" y2="130" stroke="#e64a00" stroke-width="1.5" marker-end="url(#ao)"/>
-<line x1="830" y1="155" x2="816" y2="220" stroke="#e64a00" stroke-width="1.2" marker-end="url(#ao)"/>
-<line x1="830" y1="175" x2="816" y2="310" stroke="#e64a00" stroke-width="1.2" marker-end="url(#ao)"/>
-<text x="824" y="120" text-anchor="middle" fill="#e64a00" font-size="9">scrape</text>
-
-<!-- Alloy → Grafana Cloud -->
-<line x1="957" y1="172" x2="870" y2="434" stroke="#e64a00" stroke-width="2" marker-end="url(#ao)"/>
-<text x="990" y="310" fill="#e64a00" font-size="10">push</text>
-<text x="990" y="324" fill="#e64a00" font-size="10">metrics + logs</text>
-
-<!-- GitHub Actions → k3s -->
-<line x1="760" y1="520" x2="740" y2="410" stroke="#aaa" stroke-width="1.2" stroke-dasharray="5,3" marker-end="url(#a)"/>
-<text x="725" y="475" fill="#aaa" font-size="9">kubectl apply</text>
+<rect width="960" height="458" fill="#f7f8fa"/>
 
 <!-- Legend -->
-<rect x="5" y="638" width="620" height="36" rx="4" fill="#fff" stroke="#ddd" stroke-width="1"/>
-<text x="15" y="652" fill="#777" font-size="10" font-weight="bold">Legend:</text>
-<line x1="68" y1="649" x2="100" y2="649" stroke="#555" stroke-width="1.5"/><text x="105" y="652" fill="#555" font-size="10">direct request</text>
-<line x1="198" y1="649" x2="230" y2="649" stroke="#555" stroke-width="1" stroke-dasharray="4,3"/><text x="235" y="652" fill="#555" font-size="10">via endpoint/indirect</text>
-<line x1="340" y1="649" x2="372" y2="649" stroke="#1565c0" stroke-width="3" stroke-dasharray="11,6"/><text x="377" y="652" fill="#1565c0" font-size="10">Tailscale WireGuard VPN</text>
-<line x1="510" y1="649" x2="542" y2="649" stroke="#e64a00" stroke-width="2"/><text x="547" y="652" fill="#e64a00" font-size="10">Alloy scrape/push</text>
-<text x="15" y="668" fill="#2e7d32" font-size="10">✅  betops.online live  ·  deletion_protection=true  ·  Repo split done  ·  betops-infra managing all AWS infra</text>
+<rect x="5" y="418" width="950" height="34" rx="6" fill="#fff" stroke="#e0e0e0" stroke-width="1"/>
+<rect x="15" y="429" width="11" height="11" rx="2" fill="#6a1b9a"/><text x="31" y="439" fill="#444" font-size="10">DNS / CDN</text>
+<rect x="108" y="429" width="11" height="11" rx="2" fill="#1565c0"/><text x="124" y="439" fill="#444" font-size="10">Compute / API</text>
+<rect x="218" y="429" width="11" height="11" rx="2" fill="#00695c"/><text x="234" y="439" fill="#444" font-size="10">Storage / Queue</text>
+<rect x="338" y="429" width="11" height="11" rx="2" fill="#0d47a1"/><text x="354" y="439" fill="#444" font-size="10">Database</text>
+<rect x="418" y="429" width="11" height="11" rx="2" fill="#37474f"/><text x="434" y="439" fill="#444" font-size="10">Network</text>
+<rect x="498" y="429" width="11" height="11" rx="2" fill="#e65100"/><text x="514" y="439" fill="#444" font-size="10">Monitoring</text>
+<rect x="590" y="429" width="11" height="11" rx="2" fill="#bf360c"/><text x="606" y="439" fill="#444" font-size="10">External</text>
+<rect x="668" y="429" width="11" height="11" rx="2" fill="#263238"/><text x="684" y="439" fill="#444" font-size="10">CI / CD</text>
+<line x1="738" y1="435" x2="762" y2="435" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/><text x="767" y="439" fill="#444" font-size="10">data flow</text>
+<line x1="840" y1="435" x2="864" y2="435" stroke="#4527a0" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#ap)"/><text x="869" y="439" fill="#444" font-size="10">Tailscale VPN</text>
+
+<!-- ── USER (outside AWS) ── -->
+<rect x="5" y="50" width="75" height="38" rx="8" fill="#546e7a"/>
+<text x="42" y="67" text-anchor="middle" font-weight="bold" fill="#fff" font-size="11">👤 User</text>
+<text x="42" y="81" text-anchor="middle" fill="#cfd8dc" font-size="9">browser</text>
+
+<!-- ── AWS CLOUD (sized to content) ── -->
+<rect x="88" y="22" width="478" height="290" rx="10" fill="#e3f2fd" stroke="#1565c0" stroke-width="1.5"/>
+<text x="100" y="38" font-size="11" font-weight="bold" fill="#0d47a1">☁  AWS Cloud  (us-east-1)</text>
+
+<!-- Row 1: Route53 · CloudFront · S3 -->
+<rect x="96" y="50" width="128" height="38" rx="8" fill="#6a1b9a"/>
+<text x="160" y="67" text-anchor="middle" font-weight="bold" fill="#fff" font-size="11">Route53 ✅</text>
+<text x="160" y="81" text-anchor="middle" fill="#e1bee7" font-size="9">betops.online hosted zone</text>
+
+<rect x="242" y="50" width="152" height="38" rx="8" fill="#6a1b9a"/>
+<text x="318" y="67" text-anchor="middle" font-weight="bold" fill="#fff" font-size="11">CloudFront ✅</text>
+<text x="318" y="81" text-anchor="middle" fill="#e1bee7" font-size="9">betops.online · ACM cert</text>
+
+<rect x="412" y="50" width="146" height="38" rx="8" fill="#00695c"/>
+<text x="485" y="67" text-anchor="middle" font-weight="bold" fill="#fff" font-size="11">S3</text>
+<text x="485" y="81" text-anchor="middle" fill="#b2dfdb" font-size="9">React SPA frontend</text>
+
+<!-- Row 2: API Gateway -->
+<rect x="242" y="116" width="152" height="38" rx="8" fill="#1565c0"/>
+<text x="318" y="133" text-anchor="middle" font-weight="bold" fill="#fff" font-size="11">API Gateway ✅</text>
+<text x="318" y="147" text-anchor="middle" fill="#bbdefb" font-size="9">api.betops.online</text>
+
+<!-- Row 3: Lambda · SQS -->
+<rect x="242" y="182" width="152" height="38" rx="8" fill="#1565c0"/>
+<text x="318" y="199" text-anchor="middle" font-weight="bold" fill="#fff" font-size="11">Lambda</text>
+<text x="318" y="213" text-anchor="middle" fill="#bbdefb" font-size="9">Python 3.12 · betops-api</text>
+
+<rect x="412" y="182" width="146" height="38" rx="8" fill="#00695c"/>
+<text x="485" y="199" text-anchor="middle" font-weight="bold" fill="#fff" font-size="11">SQS</text>
+<text x="485" y="213" text-anchor="middle" fill="#b2dfdb" font-size="9">betops-queue · DLQ</text>
+
+<!-- Row 4: RDS · EC2 -->
+<rect x="96" y="252" width="152" height="46" rx="8" fill="#0d47a1"/>
+<text x="172" y="272" text-anchor="middle" font-weight="bold" fill="#fff" font-size="11">RDS Postgres 15</text>
+<text x="172" y="288" text-anchor="middle" fill="#90caf9" font-size="9">db.t3.micro · deletion_protection ✅</text>
+
+<rect x="266" y="252" width="152" height="46" rx="8" fill="#37474f"/>
+<text x="342" y="272" text-anchor="middle" font-weight="bold" fill="#fff" font-size="11">EC2 t3.micro</text>
+<text x="342" y="288" text-anchor="middle" fill="#b0bec5" font-size="9">Tailscale subnet router</text>
+
+<!-- Tailscale boundary -->
+<line x1="573" y1="44" x2="573" y2="360" stroke="#4527a0" stroke-width="1.5" stroke-dasharray="6,4"/>
+<text x="573" y="374" text-anchor="middle" fill="#4527a0" font-size="9" font-weight="bold">Tailscale WireGuard</text>
+
+<!-- ── HOMELAB (sized to content) ── -->
+<rect x="582" y="22" width="370" height="344" rx="10" fill="#e8f5e9" stroke="#2e7d32" stroke-width="1.5"/>
+<text x="594" y="38" font-size="11" font-weight="bold" fill="#1b5e20">🏠  Homelab · k3s  (worker-node01)</text>
+
+<!-- Row 3: Worker -->
+<rect x="590" y="182" width="155" height="38" rx="8" fill="#1565c0"/>
+<text x="667" y="199" text-anchor="middle" font-weight="bold" fill="#fff" font-size="11">betops-worker</text>
+<text x="667" y="213" text-anchor="middle" fill="#bbdefb" font-size="9">polls SQS · LMSR odds</text>
+
+<!-- Row 4: exporters -->
+<rect x="590" y="252" width="155" height="38" rx="8" fill="#e65100"/>
+<text x="667" y="269" text-anchor="middle" font-weight="bold" fill="#fff" font-size="11">postgres-exporter</text>
+<text x="667" y="283" text-anchor="middle" fill="#ffe0cc" font-size="9">:9187 · RDS metrics</text>
+
+<rect x="590" y="308" width="155" height="38" rx="8" fill="#e65100"/>
+<text x="667" y="325" text-anchor="middle" font-weight="bold" fill="#fff" font-size="11">sqs-exporter</text>
+<text x="667" y="339" text-anchor="middle" fill="#ffe0cc" font-size="9">:8000 · queue depth</text>
+
+<!-- Alloy -->
+<rect x="762" y="238" width="178" height="68" rx="8" fill="#e65100"/>
+<text x="851" y="264" text-anchor="middle" font-weight="bold" fill="#fff" font-size="11">Grafana Alloy</text>
+<text x="851" y="280" text-anchor="middle" fill="#ffe0cc" font-size="9">scrapes 3 pods every 30s</text>
+<text x="851" y="294" text-anchor="middle" fill="#ffe0cc" font-size="9">ships logs → Grafana Cloud</text>
+
+<!-- ── EXTERNAL (below both boxes) ── -->
+<rect x="582" y="378" width="370" height="36" rx="8" fill="#bf360c"/>
+<text x="767" y="395" text-anchor="middle" font-weight="bold" fill="#fff" font-size="11">Grafana Cloud</text>
+<text x="767" y="408" text-anchor="middle" fill="#ffccbc" font-size="9">Prometheus metrics · Loki logs</text>
+
+<rect x="88" y="378" width="478" height="36" rx="8" fill="#263238"/>
+<text x="327" y="395" text-anchor="middle" font-weight="bold" fill="#fff" font-size="11">GitHub Actions · betops + betops-infra</text>
+<text x="327" y="408" text-anchor="middle" fill="#8b949e" font-size="9">deploy-frontend · deploy-lambda · deploy-worker · terraform · migrate · bootstrap-argocd</text>
+
+<!-- ── ARROWS ── -->
+<!-- User → Route53 -->
+<line x1="80" y1="69" x2="96" y2="69" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+<!-- Route53 → CloudFront -->
+<line x1="224" y1="64" x2="242" y2="64" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+<!-- CloudFront → S3 (static) -->
+<line x1="394" y1="62" x2="412" y2="62" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+<text x="403" y="57" text-anchor="middle" fill="#555" font-size="9">static</text>
+<!-- CloudFront → API GW (API requests) -->
+<line x1="318" y1="88" x2="318" y2="116" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+<text x="333" y="107" fill="#555" font-size="9">API</text>
+<!-- API GW → Lambda -->
+<line x1="318" y1="154" x2="318" y2="182" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+<!-- Lambda → RDS (L-shaped to avoid crossing) -->
+<path d="M 318 220 L 318 240 L 172 240 L 172 252" fill="none" stroke="#1565c0" stroke-width="1.5" marker-end="url(#ab)"/>
+<!-- Lambda → SQS -->
+<line x1="394" y1="201" x2="412" y2="201" stroke="#555" stroke-width="1.5" marker-end="url(#a)"/>
+<!-- SQS → Worker (via Tailscale, short!) -->
+<line x1="558" y1="201" x2="590" y2="201" stroke="#4527a0" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#ap)"/>
+<text x="574" y="195" text-anchor="middle" fill="#4527a0" font-size="9">poll</text>
+<!-- pods → Alloy (metrics) -->
+<line x1="745" y1="201" x2="762" y2="254" stroke="#e65100" stroke-width="1.3" marker-end="url(#ao)"/>
+<line x1="745" y1="271" x2="762" y2="268" stroke="#e65100" stroke-width="1.3" marker-end="url(#ao)"/>
+<line x1="745" y1="327" x2="762" y2="284" stroke="#e65100" stroke-width="1.3" marker-end="url(#ao)"/>
+<!-- Alloy → Grafana Cloud -->
+<line x1="851" y1="306" x2="851" y2="378" stroke="#e65100" stroke-width="1.5" marker-end="url(#ao)"/>
 </svg>
 </div>
 
-<!-- ══════════════════════════════ PHASES ══════════════════════════════ -->
+<!-- ══════════════════ PHASES ══════════════════ -->
 <div class="phases">
-  <div class="phase p1" style="border-color:#388e3c;background:#f1f8e9">
+  <div class="phase" style="border-color:#388e3c;background:#f1f8e9">
     <h3>Phase 1 — Custom Domain  ✅ DONE</h3>
     <p>
-      Route53 hosted zone + ACM wildcard cert for <strong>betops.online</strong>.<br>
-      <strong>betops.online → CloudFront</strong> (frontend) and <strong>api.betops.online → API Gateway</strong>.<br>
-      GoDaddy nameservers updated → DNS live → cert validated → site live at <strong>https://betops.online</strong>
+      Route53 hosted zone · ACM wildcard cert · <strong>betops.online</strong> → CloudFront ·
+      <strong>api.betops.online</strong> → API Gateway · GoDaddy NS updated → DNS live.
     </p>
   </div>
-  <div class="phase p2" style="border-color:#388e3c;background:#f1f8e9">
+  <div class="phase" style="border-color:#388e3c;background:#f1f8e9">
     <h3>Phase 2 — Helm Charts  ✅ DONE</h3>
     <p>
-      betops-infra repo created at <strong>ilaycohen12/betops-infra</strong>.<br>
-      <code>helm/worker/</code> and <code>helm/observability/</code> charts ready. Image tags templated via <code>values.yaml</code>.<br>
-      betops CI now commits tag updates to betops-infra instead of running kubectl apply.<br>
-      Next: add INFRA_REPO_PAT secret, then proceed to Phase 3.
+      <strong>betops-infra</strong> repo · <code>helm/worker/</code> and <code>helm/observability/</code> charts ready ·
+      image tags templated via <code>values.yaml</code> · CI commits tag bumps instead of running <code>kubectl apply</code>.
     </p>
   </div>
-  <div class="phase p3">
-    <h3>Phase 3 — Grafana in k3s + Ingress</h3>
+  <div class="phase" style="border-color:#7b1fa2">
+    <h3>Phase 3 — Self-hosted Grafana</h3>
     <p>
-      Deploy Grafana + Prometheus in k3s (Helm charts).<br>
-      k3s already ships <strong>Traefik</strong> — no ingress controller to install.<br>
-      Add Ingress routing <code>dashboard.yourdomain.com → Grafana:3000</code>.<br>
-      Use <strong>Tailscale Funnel</strong> for external HTTPS access (no public IP needed).
+      Deploy Grafana + Prometheus in k3s via Helm ·
+      Alloy pushes to local Prometheus instead of Grafana Cloud ·
+      expose via Traefik Ingress + Tailscale Funnel.
     </p>
   </div>
-  <div class="phase p4">
-    <h3>Phase 4 — ArgoCD (GitOps)</h3>
+  <div class="phase" style="border-color:#6a1b9a;background:#f3e5f5">
+    <h3>Phase 4 — ArgoCD (GitOps)  ⏳ IN PROGRESS</h3>
     <p>
-      Deploy ArgoCD in k3s. It watches the repo's <code>helm/</code> dir and auto-syncs on every push.<br>
-      Remove <code>kubectl apply</code> from GitHub Actions — CI only builds and pushes images.<br>
-      Expose ArgoCD UI at <code>argocd.yourdomain.com</code> via Traefik + Tailscale Funnel.
+      ArgoCD watches <code>helm/</code> in betops-infra and auto-syncs on every push ·
+      CI only builds &amp; pushes images — ArgoCD handles deploys ·
+      <strong>Today:</strong> CRDs applied, applicationset-controller + server running.
     </p>
   </div>
 </div>
 
-<!-- ══════════════════════════════ FUTURE STATE ══════════════════════════════ -->
+<!-- ══════════════════ FUTURE STATE ══════════════════ -->
 <div class="card">
   <div class="card-title">Future State  (after all 4 phases)</div>
   <div class="card-desc">
-    Custom domain, self-hosted Grafana, Helm charts, ArgoCD GitOps.
-    <span style="color:#ff8f00;font-weight:600">★ Gold = new component</span> &nbsp;
-    <span style="color:#2e7d32;font-weight:600">■ Green = unchanged</span> &nbsp;
-    <span style="color:#c62828;font-weight:600">✓ Red strikethrough = removed/replaced</span>
+    <span style="display:inline-block;width:10px;height:10px;background:#f57f17;border-radius:2px;vertical-align:middle;margin-right:4px"></span><strong>Gold</strong> = planned &nbsp;·&nbsp;
+    <span style="color:#6a1b9a;font-weight:600">⏳</span> = in progress &nbsp;·&nbsp;
+    <span style="color:#2e7d32;font-weight:600">✅</span> = done
   </div>
 
-<svg viewBox="0 0 1100 720" xmlns="http://www.w3.org/2000/svg" font-family="Arial,sans-serif" font-size="12">
+<svg viewBox="0 0 960 498" xmlns="http://www.w3.org/2000/svg" font-family="Arial,sans-serif" font-size="12">
 <defs>
-  <marker id="a2"  markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#555"/></marker>
-  <marker id="ab2" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#1565c0"/></marker>
-  <marker id="ao2" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#e64a00"/></marker>
-  <marker id="ap2" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#6a1b9a"/></marker>
-  <marker id="ag2" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#2e7d32"/></marker>
+  <marker id="a2"  markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#555"/></marker>
+  <marker id="ab2" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#1565c0"/></marker>
+  <marker id="ao2" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#e65100"/></marker>
+  <marker id="ap2" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#4527a0"/></marker>
 </defs>
+<rect width="960" height="498" fill="#f7f8fa"/>
 
-<rect width="1100" height="720" fill="#f7f8fa"/>
+<!-- Legend -->
+<rect x="5" y="458" width="950" height="34" rx="6" fill="#fff" stroke="#e0e0e0" stroke-width="1"/>
+<rect x="15" y="469" width="11" height="11" rx="2" fill="#6a1b9a"/><text x="31" y="479" fill="#444" font-size="10">DNS / CDN</text>
+<rect x="108" y="469" width="11" height="11" rx="2" fill="#1565c0"/><text x="124" y="479" fill="#444" font-size="10">Compute / API</text>
+<rect x="218" y="469" width="11" height="11" rx="2" fill="#00695c"/><text x="234" y="479" fill="#444" font-size="10">Storage / Queue</text>
+<rect x="338" y="469" width="11" height="11" rx="2" fill="#0d47a1"/><text x="354" y="479" fill="#444" font-size="10">Database</text>
+<rect x="418" y="469" width="11" height="11" rx="2" fill="#37474f"/><text x="434" y="479" fill="#444" font-size="10">Network</text>
+<rect x="498" y="469" width="11" height="11" rx="2" fill="#e65100"/><text x="514" y="479" fill="#444" font-size="10">Monitoring</text>
+<rect x="590" y="469" width="11" height="11" rx="2" fill="#fff" stroke="#f57f17" stroke-width="2"/><text x="606" y="479" fill="#444" font-size="10">planned</text>
+<rect x="660" y="469" width="11" height="11" rx="2" fill="#fff" stroke="#6a1b9a" stroke-width="2"/><text x="676" y="479" fill="#444" font-size="10">in progress</text>
+<line x1="745" y1="475" x2="769" y2="475" stroke="#555" stroke-width="1.5" marker-end="url(#a2)"/><text x="774" y="479" fill="#444" font-size="10">data flow</text>
+<line x1="850" y1="475" x2="874" y2="475" stroke="#e65100" stroke-width="1.5" marker-end="url(#ao2)"/><text x="879" y="479" fill="#444" font-size="10">metrics</text>
 
-<!-- ── AWS CLOUD ── -->
-<rect x="5" y="42" width="458" height="550" rx="12" fill="#ddeeff" stroke="#1a73e8" stroke-width="2"/>
-<text x="22" y="65" font-size="14" font-weight="bold" fill="#0d47a1">☁  AWS Cloud  (us-east-1)</text>
+<!-- ── USER (outside AWS) ── -->
+<rect x="5" y="50" width="75" height="38" rx="8" fill="#546e7a"/>
+<text x="42" y="67" text-anchor="middle" font-weight="bold" fill="#fff" font-size="11">👤 User</text>
+<text x="42" y="81" text-anchor="middle" fill="#cfd8dc" font-size="9">browser</text>
 
-<!-- Route53 NEW -->
-<rect x="15" y="78" width="200" height="60" rx="6" fill="#ff8f00" stroke="#e65100" stroke-width="2.5"/>
-<text x="115" y="97" text-anchor="middle" font-size="9" fill="#fff3e0">★  NEW</text>
-<text x="115" y="112" text-anchor="middle" font-weight="bold" fill="#fff">Route53</text>
-<text x="115" y="128" text-anchor="middle" fill="#fff3e0" font-size="10">yourdomain.com hosted zone</text>
+<!-- ── AWS CLOUD (sized to content) ── -->
+<rect x="88" y="22" width="478" height="330" rx="10" fill="#e3f2fd" stroke="#1565c0" stroke-width="1.5"/>
+<text x="100" y="38" font-size="11" font-weight="bold" fill="#0d47a1">☁  AWS Cloud  (us-east-1)</text>
 
-<!-- ACM NEW -->
-<rect x="230" y="78" width="220" height="60" rx="6" fill="#ff8f00" stroke="#e65100" stroke-width="2.5"/>
-<text x="340" y="97" text-anchor="middle" font-size="9" fill="#fff3e0">★  NEW</text>
-<text x="340" y="112" text-anchor="middle" font-weight="bold" fill="#fff">ACM Certificate</text>
-<text x="340" y="128" text-anchor="middle" fill="#fff3e0" font-size="10">*.yourdomain.com  (us-east-1)</text>
+<!-- Row 1: Route53 · CloudFront · S3 -->
+<rect x="96" y="50" width="128" height="38" rx="8" fill="#6a1b9a"/>
+<text x="160" y="67" text-anchor="middle" font-weight="bold" fill="#fff" font-size="11">Route53 ✅</text>
+<text x="160" y="81" text-anchor="middle" fill="#e1bee7" font-size="9">betops.online hosted zone</text>
 
-<!-- CloudFront -->
-<rect x="15" y="170" width="140" height="44" rx="6" fill="#8e24aa" stroke="#6a1b9a" stroke-width="1.5"/>
-<text x="85" y="189" text-anchor="middle" font-weight="bold" fill="#fff">CloudFront</text>
-<text x="85" y="206" text-anchor="middle" fill="#e1bee7" font-size="10">yourdomain.com  ✓ custom domain</text>
+<rect x="242" y="50" width="152" height="38" rx="8" fill="#6a1b9a"/>
+<text x="318" y="67" text-anchor="middle" font-weight="bold" fill="#fff" font-size="11">CloudFront ✅</text>
+<text x="318" y="81" text-anchor="middle" fill="#e1bee7" font-size="9">betops.online · ACM cert</text>
 
-<!-- S3 -->
-<rect x="175" y="170" width="140" height="44" rx="6" fill="#388e3c" stroke="#1b5e20" stroke-width="1.5"/>
-<text x="245" y="189" text-anchor="middle" font-weight="bold" fill="#fff">S3 Bucket</text>
-<text x="245" y="206" text-anchor="middle" fill="#c8e6c9" font-size="10">betops-frontend  (unchanged)</text>
+<rect x="412" y="50" width="146" height="38" rx="8" fill="#00695c"/>
+<text x="485" y="67" text-anchor="middle" font-weight="bold" fill="#fff" font-size="11">S3</text>
+<text x="485" y="81" text-anchor="middle" fill="#b2dfdb" font-size="9">React SPA frontend</text>
 
-<!-- User arrow area -->
-<rect x="330" y="170" width="120" height="44" rx="6" fill="#fff" stroke="#9e9e9e" stroke-width="1.5"/>
-<text x="390" y="192" text-anchor="middle" font-weight="bold" fill="#333">👤 User</text>
-<text x="390" y="207" text-anchor="middle" fill="#888" font-size="10">→ yourdomain.com</text>
+<!-- Row 2: API Gateway -->
+<rect x="242" y="116" width="152" height="38" rx="8" fill="#1565c0"/>
+<text x="318" y="133" text-anchor="middle" font-weight="bold" fill="#fff" font-size="11">API Gateway ✅</text>
+<text x="318" y="147" text-anchor="middle" fill="#bbdefb" font-size="9">api.betops.online</text>
 
-<!-- API GW -->
-<rect x="15" y="252" width="140" height="44" rx="6" fill="#e65100" stroke="#bf360c" stroke-width="1.5"/>
-<text x="85" y="271" text-anchor="middle" font-weight="bold" fill="#fff">API Gateway</text>
-<text x="85" y="288" text-anchor="middle" fill="#ffe0b2" font-size="10">api.yourdomain.com  ✓</text>
+<!-- Row 3: Lambda · SQS -->
+<rect x="242" y="182" width="152" height="38" rx="8" fill="#1565c0"/>
+<text x="318" y="199" text-anchor="middle" font-weight="bold" fill="#fff" font-size="11">Lambda</text>
+<text x="318" y="213" text-anchor="middle" fill="#bbdefb" font-size="9">Python 3.12 · betops-api</text>
 
-<!-- Lambda -->
-<rect x="175" y="252" width="140" height="44" rx="6" fill="#f57f17" stroke="#e65100" stroke-width="1.5"/>
-<text x="245" y="271" text-anchor="middle" font-weight="bold" fill="#fff">Lambda</text>
-<text x="245" y="288" text-anchor="middle" fill="#fff8e1" font-size="10">betops-api  (unchanged)</text>
+<rect x="412" y="182" width="146" height="38" rx="8" fill="#00695c"/>
+<text x="485" y="199" text-anchor="middle" font-weight="bold" fill="#fff" font-size="11">SQS</text>
+<text x="485" y="213" text-anchor="middle" fill="#b2dfdb" font-size="9">betops-queue · DLQ</text>
 
-<!-- VPC -->
-<rect x="14" y="320" width="440" height="255" rx="8" fill="none" stroke="#4285f4" stroke-width="1.5" stroke-dasharray="8,4"/>
-<text x="28" y="338" font-size="11" font-weight="bold" fill="#1565c0">VPC  10.0.0.0/16</text>
+<!-- Row 4: RDS · EC2 -->
+<rect x="96" y="252" width="152" height="46" rx="8" fill="#0d47a1"/>
+<text x="172" y="272" text-anchor="middle" font-weight="bold" fill="#fff" font-size="11">RDS Postgres 15</text>
+<text x="172" y="288" text-anchor="middle" fill="#90caf9" font-size="9">db.t3.micro · deletion_protection ✅</text>
 
-<!-- RDS FIXED -->
-<rect x="24" y="352" width="175" height="68" rx="6" fill="#1565c0" stroke="#ff8f00" stroke-width="2.5"/>
-<text x="111" y="371" text-anchor="middle" font-weight="bold" fill="#fff">RDS Postgres 15</text>
-<text x="111" y="388" text-anchor="middle" fill="#bbdefb" font-size="10">db.t3.micro  ·  20 GB</text>
-<text x="111" y="403" text-anchor="middle" fill="#ffe082" font-size="9">★  backup_retention = 7</text>
-<text x="111" y="416" text-anchor="middle" fill="#ffe082" font-size="9">★  deletion_protection = true</text>
+<rect x="266" y="252" width="152" height="46" rx="8" fill="#37474f"/>
+<text x="342" y="272" text-anchor="middle" font-weight="bold" fill="#fff" font-size="11">EC2 t3.micro</text>
+<text x="342" y="288" text-anchor="middle" fill="#b0bec5" font-size="9">Tailscale subnet router</text>
 
-<!-- SQS -->
-<rect x="215" y="352" width="230" height="68" rx="6" fill="#c62828" stroke="#b71c1c" stroke-width="1.5"/>
-<text x="330" y="374" text-anchor="middle" font-weight="bold" fill="#fff">SQS Queue + DLQ</text>
-<text x="330" y="391" text-anchor="middle" fill="#ffcdd2" font-size="10">betops-queue  (unchanged)</text>
+<!-- Row 5: Traefik Ingress banner (new, planned) -->
+<rect x="96" y="318" width="462" height="28" rx="6" fill="none" stroke="#f57f17" stroke-width="2"/>
+<text x="327" y="337" text-anchor="middle" fill="#f57f17" font-size="11" font-weight="bold">★  Traefik Ingress + Tailscale Funnel  (planned)</text>
 
-<!-- EC2 Tailscale -->
-<rect x="24" y="440" width="180" height="62" rx="6" fill="#bf360c" stroke="#7f0000" stroke-width="1.5"/>
-<text x="114" y="461" text-anchor="middle" font-weight="bold" fill="#fff">EC2  t3.micro</text>
-<text x="114" y="477" text-anchor="middle" fill="#ffccbc" font-size="10">Tailscale router  (unchanged)</text>
-<text x="114" y="492" text-anchor="middle" fill="#ff8a65" font-size="9">still just the VPN bridge</text>
+<!-- Tailscale boundary -->
+<line x1="573" y1="44" x2="573" y2="410" stroke="#4527a0" stroke-width="1.5" stroke-dasharray="6,4"/>
+<text x="573" y="422" text-anchor="middle" fill="#4527a0" font-size="9" font-weight="bold">Tailscale WireGuard</text>
 
-<!-- Secrets + Endpoints -->
-<rect x="220" y="440" width="225" height="62" rx="6" fill="#546e7a" stroke="#37474f" stroke-width="1.5"/>
-<text x="332" y="461" text-anchor="middle" font-weight="bold" fill="#fff">Secrets Manager + VPC Endpoints</text>
-<text x="332" y="478" text-anchor="middle" fill="#eceff1" font-size="10">unchanged</text>
+<!-- ── HOMELAB (sized to content) ── -->
+<rect x="582" y="22" width="372" height="384" rx="10" fill="#e8f5e9" stroke="#2e7d32" stroke-width="1.5"/>
+<text x="594" y="38" font-size="11" font-weight="bold" fill="#1b5e20">🏠  Homelab · k3s</text>
 
-<!-- Terraform -->
-<rect x="14" y="518" width="440" height="40" rx="6" fill="#e8eaf6" stroke="#9fa8da" stroke-width="1"/>
-<text x="234" y="536" text-anchor="middle" fill="#283593" font-size="11" font-weight="bold">Terraform manages all AWS resources  ·  state in S3</text>
-<text x="234" y="552" text-anchor="middle" fill="#3949ab" font-size="10">★  Add: Route53 zone, ACM cert, CloudFront alias, API GW custom domain</text>
+<!-- Row 3: Worker · ArgoCD -->
+<rect x="590" y="182" width="155" height="38" rx="8" fill="#1565c0"/>
+<text x="667" y="199" text-anchor="middle" font-weight="bold" fill="#fff" font-size="11">betops-worker</text>
+<text x="667" y="213" text-anchor="middle" fill="#bbdefb" font-size="9">polls SQS · LMSR odds</text>
 
-<!-- ── HOMELAB FUTURE ── -->
-<rect x="473" y="42" width="622" height="630" rx="12" fill="#e8f5e9" stroke="#388e3c" stroke-width="2"/>
-<text x="490" y="65" font-size="14" font-weight="bold" fill="#1b5e20">🏠 Homelab — Proxmox / k3s  (worker-node01)</text>
+<rect x="758" y="182" width="188" height="38" rx="8" fill="none" stroke="#6a1b9a" stroke-width="2.5"/>
+<text x="852" y="199" text-anchor="middle" font-weight="bold" fill="#6a1b9a" font-size="11">ArgoCD  ⏳</text>
+<text x="852" y="213" text-anchor="middle" fill="#7b1fa2" font-size="9">GitOps · watches helm/ · auto-syncs</text>
 
-<!-- Traefik Ingress NEW -->
-<rect x="483" y="78" width="602" height="52" rx="6" fill="#ad1457" stroke="#880e4f" stroke-width="2.5"/>
-<text x="784" y="97" text-anchor="middle" font-size="9" fill="#fce4ec">★  NEW  (k3s ships Traefik built-in — just configure it)</text>
-<text x="784" y="114" text-anchor="middle" font-weight="bold" fill="#fff" font-size="12">Traefik Ingress  +  Tailscale Funnel  (external HTTPS)</text>
-<text x="784" y="127" text-anchor="middle" fill="#fce4ec" font-size="10">dashboard.yourdomain.com → Grafana:3000  ·  argocd.yourdomain.com → ArgoCD:8080</text>
+<!-- Row 4: exporters · Prometheus -->
+<rect x="590" y="252" width="155" height="38" rx="8" fill="#e65100"/>
+<text x="667" y="269" text-anchor="middle" font-weight="bold" fill="#fff" font-size="11">postgres-exporter</text>
+<text x="667" y="283" text-anchor="middle" fill="#ffe0cc" font-size="9">:9187 · RDS metrics</text>
 
-<!-- Helm banner -->
-<rect x="483" y="142" width="602" height="24" rx="4" fill="#ede7f6" stroke="#b39ddb" stroke-width="1.2"/>
-<text x="784" y="158" text-anchor="middle" fill="#4a148c" font-size="10" font-weight="bold">★  All pods managed as Helm charts  —  helm/worker/  helm/observability/  helm/grafana/  helm/argocd/</text>
+<rect x="758" y="252" width="188" height="38" rx="8" fill="none" stroke="#f57f17" stroke-width="2"/>
+<text x="852" y="269" text-anchor="middle" font-weight="bold" fill="#f57f17" font-size="11">Prometheus  ★</text>
+<text x="852" y="283" text-anchor="middle" fill="#888" font-size="9">local metrics storage</text>
 
-<!-- ── EXISTING PODS (unchanged) ── -->
-<text x="490" y="186" font-size="10" fill="#2e7d32" font-weight="bold">Existing  (unchanged)</text>
+<!-- Row 5: sqs-exp · Grafana (self-hosted) -->
+<rect x="590" y="308" width="155" height="38" rx="8" fill="#e65100"/>
+<text x="667" y="325" text-anchor="middle" font-weight="bold" fill="#fff" font-size="11">sqs-exporter</text>
+<text x="667" y="339" text-anchor="middle" fill="#ffe0cc" font-size="9">:8000 · queue depth</text>
 
-<!-- betops-worker -->
-<rect x="483" y="196" width="162" height="75" rx="6" fill="#00695c" stroke="#004d40" stroke-width="1.5"/>
-<text x="564" y="216" text-anchor="middle" font-weight="bold" fill="#fff">betops-worker</text>
-<text x="564" y="233" text-anchor="middle" fill="#b2dfdb" font-size="10">polls SQS · LMSR odds</text>
-<text x="564" y="249" text-anchor="middle" fill="#b2dfdb" font-size="10">settles markets · :8080</text>
-<text x="564" y="263" text-anchor="middle" fill="#80cbc4" font-size="9">via Tailscale</text>
+<rect x="758" y="308" width="188" height="38" rx="8" fill="none" stroke="#f57f17" stroke-width="2"/>
+<text x="852" y="325" text-anchor="middle" font-weight="bold" fill="#f57f17" font-size="11">Grafana  ★</text>
+<text x="852" y="339" text-anchor="middle" fill="#888" font-size="9">self-hosted · replaces Grafana Cloud</text>
 
-<!-- postgres-exporter -->
-<rect x="483" y="284" width="162" height="75" rx="6" fill="#00695c" stroke="#004d40" stroke-width="1.5"/>
-<text x="564" y="304" text-anchor="middle" font-weight="bold" fill="#fff">postgres-exporter</text>
-<text x="564" y="321" text-anchor="middle" fill="#b2dfdb" font-size="10">RDS metrics :9187</text>
-<text x="564" y="337" text-anchor="middle" fill="#80cbc4" font-size="9">via Tailscale</text>
+<!-- Row 6: Alloy -->
+<rect x="590" y="362" width="360" height="38" rx="8" fill="#e65100"/>
+<text x="770" y="379" text-anchor="middle" font-weight="bold" fill="#fff" font-size="11">Grafana Alloy</text>
+<text x="770" y="393" text-anchor="middle" fill="#ffe0cc" font-size="9">scrapes 3 pods · pushes → Prometheus ★  (no longer to Grafana Cloud)</text>
 
-<!-- sqs-exporter -->
-<rect x="483" y="372" width="162" height="75" rx="6" fill="#00695c" stroke="#004d40" stroke-width="1.5"/>
-<text x="564" y="392" text-anchor="middle" font-weight="bold" fill="#fff">sqs-exporter</text>
-<text x="564" y="409" text-anchor="middle" fill="#b2dfdb" font-size="10">SQS metrics :8000</text>
-<text x="564" y="425" text-anchor="middle" fill="#80cbc4" font-size="9">AWS SDK</text>
+<!-- ── EXTERNAL ── -->
+<rect x="88" y="418" width="866" height="34" rx="8" fill="#263238"/>
+<text x="521" y="435" text-anchor="middle" font-weight="bold" fill="#fff" font-size="11">GitHub Actions</text>
+<text x="521" y="448" text-anchor="middle" fill="#8b949e" font-size="9">betops: build image → push GHCR → bump tag in betops-infra  ·  betops-infra: terraform · ArgoCD syncs automatically</text>
 
-<!-- ── NEW PODS ── -->
-<text x="660" y="186" font-size="10" fill="#ff8f00" font-weight="bold">★  New</text>
-
-<!-- Prometheus NEW -->
-<rect x="660" y="196" width="162" height="75" rx="6" fill="#bf360c" stroke="#ff8f00" stroke-width="2.5"/>
-<text x="741" y="213" text-anchor="middle" font-size="9" fill="#ffe082">★  NEW</text>
-<text x="741" y="229" text-anchor="middle" font-weight="bold" fill="#fff">Prometheus</text>
-<text x="741" y="246" text-anchor="middle" fill="#ffccbc" font-size="10">local metrics storage</text>
-<text x="741" y="262" text-anchor="middle" fill="#ffccbc" font-size="9">replaces Grafana Cloud</text>
-
-<!-- Grafana NEW -->
-<rect x="660" y="284" width="162" height="75" rx="6" fill="#e64a00" stroke="#ff8f00" stroke-width="2.5"/>
-<text x="741" y="301" text-anchor="middle" font-size="9" fill="#ffe082">★  NEW</text>
-<text x="741" y="317" text-anchor="middle" font-weight="bold" fill="#fff">Grafana</text>
-<text x="741" y="334" text-anchor="middle" fill="#ffe0cc" font-size="10">self-hosted in k3s</text>
-<text x="741" y="350" text-anchor="middle" fill="#ffccaa" font-size="9">dashboard.yourdomain.com</text>
-
-<!-- ArgoCD NEW -->
-<rect x="660" y="372" width="162" height="75" rx="6" fill="#6a1b9a" stroke="#ff8f00" stroke-width="2.5"/>
-<text x="741" y="389" text-anchor="middle" font-size="9" fill="#ffe082">★  NEW</text>
-<text x="741" y="405" text-anchor="middle" font-weight="bold" fill="#fff">ArgoCD</text>
-<text x="741" y="422" text-anchor="middle" fill="#e1bee7" font-size="10">GitOps controller</text>
-<text x="741" y="438" text-anchor="middle" fill="#ce93d8" font-size="9">argocd.yourdomain.com</text>
-
-<!-- Alloy (updated) -->
-<rect x="838" y="196" width="248" height="75" rx="6" fill="#e64a00" stroke="#bf360c" stroke-width="1.5"/>
-<text x="962" y="216" text-anchor="middle" font-weight="bold" fill="#fff">Grafana Alloy</text>
-<text x="962" y="233" text-anchor="middle" fill="#ffe0cc" font-size="10">scrapes all pods  every 30s</text>
-<text x="962" y="249" text-anchor="middle" fill="#ffe0cc" font-size="10">→ pushes to local Prometheus</text>
-<text x="962" y="264" text-anchor="middle" fill="#ffccaa" font-size="9">(no longer to Grafana Cloud)</text>
-
-<!-- ClusterIP note -->
-<rect x="483" y="460" width="602" height="36" rx="6" fill="#c8e6c9" stroke="#81c784" stroke-width="1.2"/>
-<text x="784" y="477" text-anchor="middle" fill="#1b5e20" font-size="11" font-weight="bold">ClusterIP services unchanged  ·  Grafana + ArgoCD exposed via Traefik Ingress + Tailscale Funnel</text>
-<text x="784" y="491" text-anchor="middle" fill="#2e7d32" font-size="10">Tailscale Funnel = public HTTPS on your Tailscale node  —  no LoadBalancer, no public IP required</text>
-
-<!-- Git repo -->
-<rect x="483" y="510" width="602" height="36" rx="6" fill="#e8eaf6" stroke="#3f51b5" stroke-width="1.5"/>
-<text x="784" y="527" text-anchor="middle" fill="#283593" font-size="11" font-weight="bold">ilaycohen12/betops-infra  —  ArgoCD watches helm/ on main branch</text>
-<text x="784" y="543" text-anchor="middle" fill="#3949ab" font-size="10">betops CI bumps values.yaml → ArgoCD detects change → kubectl apply (internally)</text>
-
-<!-- GitHub Actions UPDATED -->
-<rect x="483" y="560" width="602" height="100" rx="12" fill="#24292e" stroke="#444" stroke-width="1.5"/>
-<text x="784" y="582" text-anchor="middle" font-weight="bold" fill="#fff" font-size="13">GitHub Actions  (updated)</text>
-<text x="784" y="600" text-anchor="middle" fill="#8b949e" font-size="10">terraform → AWS infra  ·  deploy-frontend → S3 + CloudFront</text>
-<text x="784" y="616" text-anchor="middle" fill="#4caf50" font-size="10">★  deploy-worker → pytest → build image → push GHCR  (that's it, ArgoCD handles the rest)</text>
-<text x="784" y="632" text-anchor="middle" fill="#4caf50" font-size="10">★  deploy-observability → build sqs-exporter → push GHCR  (ArgoCD syncs automatically)</text>
-<text x="784" y="648" text-anchor="middle" fill="#f85149" font-size="10" text-decoration="line-through">removed: kubectl apply steps — GitOps takes over</text>
-
-<!-- GHCR -->
-<rect x="483" y="672" width="602" height="36" rx="6" fill="#161b22" stroke="#30363d" stroke-width="1.5"/>
-<text x="784" y="688" text-anchor="middle" font-weight="bold" fill="#fff">GHCR  (ghcr.io/ilaycohen12)</text>
-<text x="784" y="702" text-anchor="middle" fill="#8b949e" font-size="10">betops-worker  ·  betops-sqs-exporter  ·  GHA builds &amp; pushes  →  ArgoCD pulls on deploy</text>
-
-<!-- ── ARROWS FUTURE ── -->
-
-<!-- User → Route53 → CF -->
-<line x1="390" y1="192" x2="215" y2="192" stroke="#555" stroke-width="1.5" marker-end="url(#a2)"/>
-<line x1="115" y1="170" x2="115" y2="138" stroke="#ff8f00" stroke-width="1.5" marker-end="url(#a2)"/>
-<text x="253" y="188" fill="#555" font-size="9">DNS</text>
-
-<!-- CF → S3 -->
-<line x1="155" y1="183" x2="175" y2="183" stroke="#555" stroke-width="1.5" marker-end="url(#a2)"/>
-
-<!-- CF → API GW -->
-<line x1="85" y1="214" x2="85" y2="252" stroke="#555" stroke-width="1.5" marker-end="url(#a2)"/>
-<text x="100" y="237" fill="#555" font-size="9">API req</text>
-
-<!-- API GW → Lambda -->
-<line x1="155" y1="274" x2="175" y2="274" stroke="#555" stroke-width="1.5" marker-end="url(#a2)"/>
-
-<!-- Lambda → RDS -->
-<line x1="215" y1="296" x2="155" y2="352" stroke="#1976d2" stroke-width="1.8" marker-end="url(#ab2)"/>
-
-<!-- Lambda → SQS -->
-<line x1="275" y1="296" x2="320" y2="352" stroke="#c62828" stroke-width="1.8" marker-end="url(#a2)"/>
-
-<!-- Tailscale VPN -->
-<line x1="204" y1="471" x2="473" y2="318" stroke="#1565c0" stroke-width="3" stroke-dasharray="11,6" marker-end="url(#ab2)"/>
-<line x1="473" y1="324" x2="204" y2="477" stroke="#1565c0" stroke-width="1.5" stroke-dasharray="11,6" marker-end="url(#ab2)" opacity="0.4"/>
-<text x="330" y="385" text-anchor="middle" fill="#1565c0" font-size="11" font-weight="bold">Tailscale VPN</text>
-
-<!-- ArgoCD syncs pods -->
-<line x1="660" y1="405" x2="645" y2="395" stroke="#6a1b9a" stroke-width="1.5" marker-end="url(#ap2)"/>
-<line x1="660" y1="410" x2="645" y2="318" stroke="#6a1b9a" stroke-width="1.2" marker-end="url(#ap2)"/>
-<line x1="660" y1="415" x2="645" y2="230" stroke="#6a1b9a" stroke-width="1.2" marker-end="url(#ap2)"/>
-<text x="650" y="300" fill="#6a1b9a" font-size="9">sync</text>
-
-<!-- ArgoCD → git repo -->
-<line x1="741" y1="447" x2="741" y2="510" stroke="#6a1b9a" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#ap2)"/>
-<text x="757" y="483" fill="#6a1b9a" font-size="9">watches</text>
-
-<!-- Alloy → Prometheus (NEW direction) -->
-<line x1="838" y1="230" x2="822" y2="230" stroke="#e64a00" stroke-width="1.5" marker-end="url(#ao2)"/>
-<text x="830" y="222" fill="#e64a00" font-size="9" text-anchor="middle">scrape</text>
-<line x1="838" y1="250" x2="822" y2="320" stroke="#e64a00" stroke-width="1.2" marker-end="url(#ao2)"/>
-<line x1="838" y1="270" x2="822" y2="408" stroke="#e64a00" stroke-width="1.2" marker-end="url(#ao2)"/>
-
-<!-- Alloy → Prometheus pod -->
-<line x1="838" y1="235" x2="822" y2="235" stroke="#e64a00" stroke-width="1.8" marker-end="url(#ao2)"/>
-<line x1="868" y1="271" x2="822" y2="245" stroke="#e64a00" stroke-width="1.8" marker-end="url(#ao2)"/>
-<text x="862" y="269" fill="#e64a00" font-size="9">push</text>
-
+<!-- ── ARROWS ── -->
+<line x1="80" y1="69" x2="96" y2="69" stroke="#555" stroke-width="1.5" marker-end="url(#a2)"/>
+<line x1="224" y1="64" x2="242" y2="64" stroke="#555" stroke-width="1.5" marker-end="url(#a2)"/>
+<line x1="394" y1="62" x2="412" y2="62" stroke="#555" stroke-width="1.5" marker-end="url(#a2)"/>
+<text x="403" y="57" text-anchor="middle" fill="#555" font-size="9">static</text>
+<line x1="318" y1="88" x2="318" y2="116" stroke="#555" stroke-width="1.5" marker-end="url(#a2)"/>
+<text x="333" y="107" fill="#555" font-size="9">API</text>
+<line x1="318" y1="154" x2="318" y2="182" stroke="#555" stroke-width="1.5" marker-end="url(#a2)"/>
+<line x1="394" y1="201" x2="412" y2="201" stroke="#555" stroke-width="1.5" marker-end="url(#a2)"/>
+<path d="M 318 220 L 318 240 L 172 240 L 172 252" fill="none" stroke="#1565c0" stroke-width="1.5" marker-end="url(#ab2)"/>
+<line x1="558" y1="201" x2="590" y2="201" stroke="#4527a0" stroke-width="2" stroke-dasharray="5,3" marker-end="url(#ap2)"/>
+<text x="574" y="195" text-anchor="middle" fill="#4527a0" font-size="9">poll</text>
+<!-- ArgoCD → syncs worker -->
+<line x1="758" y1="201" x2="745" y2="201" stroke="#6a1b9a" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#ap2)"/>
+<text x="751" y="195" text-anchor="middle" fill="#6a1b9a" font-size="8">sync</text>
+<!-- pods → Alloy -->
+<line x1="667" y1="346" x2="667" y2="362" stroke="#e65100" stroke-width="1.3" marker-end="url(#ao2)"/>
+<line x1="667" y1="290" x2="667" y2="362" stroke="#e65100" stroke-width="1.3" stroke-dasharray="3,2" marker-end="url(#ao2)"/>
+<line x1="667" y1="220" x2="667" y2="362" stroke="#e65100" stroke-width="1.3" stroke-dasharray="3,2" marker-end="url(#ao2)"/>
+<!-- Alloy → Prometheus -->
+<line x1="852" y1="362" x2="852" y2="346" stroke="#e65100" stroke-width="1.5" marker-end="url(#ao2)"/>
 <!-- Prometheus → Grafana -->
-<line x1="741" y1="271" x2="741" y2="284" stroke="#e64a00" stroke-width="1.5" marker-end="url(#ao2)"/>
-<text x="757" y="280" fill="#e64a00" font-size="9">datasource</text>
-
-<!-- GHA → GHCR -->
-<line x1="784" y1="660" x2="784" y2="672" stroke="#aaa" stroke-width="1.2" marker-end="url(#a2)"/>
-
-<!-- Traefik → Grafana + ArgoCD -->
-<line x1="741" y1="130" x2="741" y2="284" stroke="#ad1457" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#a2)"/>
-<line x1="784" y1="130" x2="784" y2="372" stroke="#ad1457" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#a2)"/>
+<line x1="852" y1="290" x2="852" y2="308" stroke="#e65100" stroke-width="1.5" marker-end="url(#ao2)"/>
 </svg>
-
-  <div class="warn">
-    <strong>⚠  Fix before anything else (2 lines of Terraform)</strong>
-    <code>backup_retention_period = 7</code> and <code>deletion_protection = true</code> in <code>terraform/modules/rds/main.tf</code>.
-    Right now prod has zero RDS backups and no deletion protection.
-  </div>
 </div>
 
-<!-- ══════════════════════════════ CI/CD DIAGRAM ══════════════════════════════ -->
+<!-- ══════════════════ CI/CD ══════════════════ -->
 <div class="card">
   <div class="card-title">CI / CD — Repos &amp; Workflows</div>
   <div class="card-desc">
-    Two repos, 9 workflows. <strong>betops</strong> owns app code + image builds.
-    <strong>betops-infra</strong> owns Terraform + Helm charts.
-    The only link between them is <code>INFRA_REPO_PAT</code> — a token that lets betops CI commit tag bumps into betops-infra.
+    Two repos · <strong>betops</strong> owns app code + image builds · <strong>betops-infra</strong> owns Terraform + Helm charts.
+    Tag bumps from betops CI commit into betops-infra via <code>INFRA_REPO_PAT</code>, triggering ArgoCD sync.
   </div>
 
-<svg viewBox="0 0 1100 780" xmlns="http://www.w3.org/2000/svg" font-family="Arial,sans-serif" font-size="12">
+<svg viewBox="0 0 1060 500" xmlns="http://www.w3.org/2000/svg" font-family="Arial,sans-serif" font-size="12">
 <defs>
-  <marker id="ca" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#555"/></marker>
-  <marker id="cb" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#6a1b9a"/></marker>
-  <marker id="cc" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#1565c0"/></marker>
-  <marker id="cd" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#e65100"/></marker>
-  <marker id="ce" markerWidth="8" markerHeight="6" refX="7" refY="3" orient="auto"><polygon points="0 0,8 3,0 6" fill="#2e7d32"/></marker>
+  <marker id="ac"  markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#555"/></marker>
+  <marker id="acp" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#6a1b9a"/></marker>
 </defs>
+<rect width="1060" height="500" fill="#f7f8fa"/>
 
-<rect width="1100" height="780" fill="#f7f8fa"/>
+<!-- Legend -->
+<rect x="5" y="462" width="1050" height="32" rx="6" fill="#fff" stroke="#e0e0e0" stroke-width="1"/>
+<rect x="15" y="473" width="11" height="11" rx="2" fill="#1565c0"/><text x="31" y="483" fill="#444" font-size="10">push main</text>
+<rect x="105" y="473" width="11" height="11" rx="2" fill="#7b1fa2"/><text x="121" y="483" fill="#444" font-size="10">push main / dev</text>
+<rect x="215" y="473" width="11" height="11" rx="2" fill="#37474f"/><text x="231" y="483" fill="#444" font-size="10">manual (dispatch)</text>
+<rect x="330" y="473" width="11" height="11" rx="2" fill="#2e7d32"/><text x="346" y="483" fill="#444" font-size="10">build + deploy</text>
+<rect x="418" y="473" width="11" height="11" rx="2" fill="#6a1b9a"/><text x="434" y="483" fill="#444" font-size="10">in progress</text>
+<line x1="500" y1="479" x2="528" y2="479" stroke="#6a1b9a" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#acp)"/><text x="533" y="483" fill="#6a1b9a" font-size="10">cross-repo (INFRA_REPO_PAT)</text>
 
-<!-- ══ LEGEND ══ -->
-<rect x="10" y="10" width="680" height="28" rx="6" fill="#fff" stroke="#ddd" stroke-width="1"/>
-<rect x="20" y="19" width="12" height="12" rx="2" fill="#1565c0"/><text x="37" y="29" fill="#333" font-size="10">push to main</text>
-<rect x="115" y="19" width="12" height="12" rx="2" fill="#7b1fa2"/><text x="132" y="29" fill="#333" font-size="10">push to main/dev</text>
-<rect x="230" y="19" width="12" height="12" rx="2" fill="#37474f"/><text x="247" y="29" fill="#333" font-size="10">workflow_dispatch (manual)</text>
-<rect x="390" y="19" width="12" height="12" rx="2" fill="#bf360c"/><text x="407" y="29" fill="#333" font-size="10">push (any branch)</text>
-<line x1="510" y1="24" x2="545" y2="24" stroke="#6a1b9a" stroke-width="2" stroke-dasharray="5,3"/><text x="550" y="29" fill="#6a1b9a" font-size="10">cross-repo (PAT)</text>
-<line x1="640" y1="24" x2="675" y2="24" stroke="#1565c0" stroke-width="2"/><text x="678" y="29" fill="#1565c0" font-size="10">deploys to</text>
+<!-- betops repo -->
+<rect x="5" y="18" width="510" height="432" rx="10" fill="#f6f8fa" stroke="#1565c0" stroke-width="2"/>
+<rect x="5" y="18" width="510" height="44" rx="10" fill="#24292e"/>
+<rect x="5" y="50" width="510" height="12" fill="#24292e"/>
+<text x="260" y="40" text-anchor="middle" font-weight="bold" fill="#fff" font-size="13">ilaycohen12 / betops</text>
+<text x="260" y="56" text-anchor="middle" fill="#8b949e" font-size="10">app code · lambda · worker · frontend · sqs-exporter</text>
 
-<!-- ══ BETOPS REPO ══ -->
-<rect x="10" y="50" width="520" height="700" rx="14" fill="#e3f2fd" stroke="#1565c0" stroke-width="2.5"/>
-<rect x="10" y="50" width="520" height="42" rx="14" fill="#1565c0"/>
-<rect x="10" y="78" width="520" height="14" fill="#1565c0"/>
-<text x="270" y="78" text-anchor="middle" font-size="15" font-weight="bold" fill="#fff">ilaycohen12 / betops</text>
-<text x="270" y="92" text-anchor="middle" font-size="10" fill="#90caf9">app code · lambdas · worker · frontend · sqs-exporter</text>
+<!-- test.yml -->
+<rect x="15" y="70" width="490" height="52" rx="6" fill="#fff" stroke="#e8e8e8" stroke-width="1"/>
+<rect x="15" y="70" width="5" height="52" rx="3" fill="#7b1fa2"/>
+<text x="30" y="90" font-weight="bold" fill="#333" font-size="11">test.yml</text>
+<rect x="428" y="76" width="72" height="16" rx="4" fill="#f3e5f5"/>
+<text x="464" y="88" text-anchor="middle" fill="#7b1fa2" font-size="9">push main / dev</text>
+<text x="30" y="110" fill="#666" font-size="10">pytest lambdas/  +  pytest worker/  —  blocks deploy if failing</text>
 
-<!-- ── test.yml ── -->
-<rect x="24" y="108" width="492" height="68" rx="8" fill="#fff" stroke="#7b1fa2" stroke-width="1.8"/>
-<rect x="24" y="108" width="8" height="68" rx="4" fill="#7b1fa2"/>
-<text x="44" y="125" font-weight="bold" fill="#4a148c" font-size="11">test.yml</text>
-<rect x="430" y="113" width="80" height="16" rx="4" fill="#ede7f6"/>
-<text x="470" y="124" text-anchor="middle" fill="#6a1b9a" font-size="9">push main/dev</text>
-<text x="44" y="141" fill="#555" font-size="10">trigger: <tspan fill="#7b1fa2">lambdas/**  or  worker/**</tspan></text>
-<text x="44" y="156" fill="#555" font-size="10">test-lambda: pytest lambdas/api/  ·  test-worker: pytest worker/</text>
-<text x="44" y="169" fill="#888" font-size="9">parallel jobs · coverage report · blocks deploy if failing</text>
+<!-- test-k3s.yml -->
+<rect x="15" y="128" width="490" height="52" rx="6" fill="#fff" stroke="#e8e8e8" stroke-width="1"/>
+<rect x="15" y="128" width="5" height="52" rx="3" fill="#37474f"/>
+<text x="30" y="148" font-weight="bold" fill="#333" font-size="11">test-k3s.yml</text>
+<rect x="418" y="134" width="82" height="16" rx="4" fill="#eceff1"/>
+<text x="459" y="146" text-anchor="middle" fill="#37474f" font-size="9">manual dispatch</text>
+<text x="30" y="168" fill="#666" font-size="10">Tailscale → kubectl get nodes/pods · tail worker logs</text>
 
-<!-- ── test-k3s.yml ── -->
-<rect x="24" y="186" width="492" height="68" rx="8" fill="#fff" stroke="#37474f" stroke-width="1.8"/>
-<rect x="24" y="186" width="8" height="68" rx="4" fill="#37474f"/>
-<text x="44" y="203" font-weight="bold" fill="#263238" font-size="11">test-k3s.yml</text>
-<rect x="415" y="191" width="95" height="16" rx="4" fill="#eceff1"/>
-<text x="462" y="202" text-anchor="middle" fill="#37474f" font-size="9">workflow_dispatch</text>
-<text x="44" y="219" fill="#555" font-size="10">connect to k3s via Tailscale  →  kubectl get nodes / pods</text>
-<text x="44" y="234" fill="#555" font-size="10">show worker pod status  ·  tail last 80 lines of worker logs</text>
-<text x="44" y="247" fill="#888" font-size="9">test RDS reachability from runner and from inside cluster pod</text>
+<!-- deploy-frontend.yml -->
+<rect x="15" y="186" width="490" height="52" rx="6" fill="#fff" stroke="#e8e8e8" stroke-width="1"/>
+<rect x="15" y="186" width="5" height="52" rx="3" fill="#1565c0"/>
+<text x="30" y="206" font-weight="bold" fill="#333" font-size="11">deploy-frontend.yml</text>
+<rect x="428" y="192" width="72" height="16" rx="4" fill="#e3f2fd"/>
+<text x="464" y="204" text-anchor="middle" fill="#1565c0" font-size="9">push main</text>
+<text x="30" y="226" fill="#666" font-size="10">npm build → S3 sync → CloudFront invalidation</text>
 
-<!-- ── deploy-frontend.yml ── -->
-<rect x="24" y="264" width="492" height="68" rx="8" fill="#fff" stroke="#1565c0" stroke-width="1.8"/>
-<rect x="24" y="264" width="8" height="68" rx="4" fill="#1565c0"/>
-<text x="44" y="281" font-weight="bold" fill="#0d47a1" font-size="11">deploy-frontend.yml</text>
-<rect x="430" y="269" width="80" height="16" rx="4" fill="#e3f2fd"/>
-<text x="470" y="280" text-anchor="middle" fill="#1565c0" font-size="9">push main</text>
-<text x="44" y="297" fill="#555" font-size="10">trigger: <tspan fill="#1565c0">frontend/**</tspan></text>
-<text x="44" y="312" fill="#555" font-size="10">npm install  →  vite build  →  aws s3 sync  →  CloudFront invalidation</text>
-<text x="44" y="325" fill="#888" font-size="9">prints live URL to job summary</text>
+<!-- deploy-lambda.yml -->
+<rect x="15" y="244" width="490" height="52" rx="6" fill="#fff" stroke="#e8e8e8" stroke-width="1"/>
+<rect x="15" y="244" width="5" height="52" rx="3" fill="#1565c0"/>
+<text x="30" y="264" font-weight="bold" fill="#333" font-size="11">deploy-lambda.yml</text>
+<rect x="428" y="250" width="72" height="16" rx="4" fill="#e3f2fd"/>
+<text x="464" y="262" text-anchor="middle" fill="#1565c0" font-size="9">push main</text>
+<text x="30" y="284" fill="#666" font-size="10">pytest → zip bundle → aws lambda update-function-code</text>
 
-<!-- ── deploy-lambda.yml ── -->
-<rect x="24" y="342" width="492" height="68" rx="8" fill="#fff" stroke="#e65100" stroke-width="1.8"/>
-<rect x="24" y="342" width="8" height="68" rx="4" fill="#e65100"/>
-<text x="44" y="359" font-weight="bold" fill="#bf360c" font-size="11">deploy-lambda.yml</text>
-<rect x="430" y="347" width="80" height="16" rx="4" fill="#fff3e0"/>
-<text x="470" y="358" text-anchor="middle" fill="#e65100" font-size="9">push main</text>
-<text x="44" y="375" fill="#555" font-size="10">trigger: <tspan fill="#e65100">lambdas/**</tspan></text>
-<text x="44" y="390" fill="#555" font-size="10">pytest  →  zip bundle  →  aws lambda update-function-code  →  wait for update</text>
-<text x="44" y="403" fill="#888" font-size="9">prints function name · code size · last modified</text>
+<!-- deploy-worker.yml -->
+<rect x="15" y="302" width="490" height="52" rx="6" fill="#fff" stroke="#e8e8e8" stroke-width="1"/>
+<rect x="15" y="302" width="5" height="52" rx="3" fill="#2e7d32"/>
+<text x="30" y="322" font-weight="bold" fill="#333" font-size="11">deploy-worker.yml</text>
+<rect x="428" y="308" width="72" height="16" rx="4" fill="#e8f5e9"/>
+<text x="464" y="320" text-anchor="middle" fill="#2e7d32" font-size="9">push main</text>
+<text x="30" y="342" fill="#666" font-size="10">pytest → docker build → push GHCR → bump image tag in betops-infra</text>
 
-<!-- ── deploy-worker.yml ── -->
-<rect x="24" y="420" width="492" height="84" rx="8" fill="#fff" stroke="#2e7d32" stroke-width="1.8"/>
-<rect x="24" y="420" width="8" height="84" rx="4" fill="#2e7d32"/>
-<text x="44" y="437" font-weight="bold" fill="#1b5e20" font-size="11">deploy-worker.yml</text>
-<rect x="430" y="425" width="80" height="16" rx="4" fill="#e8f5e9"/>
-<text x="470" y="436" text-anchor="middle" fill="#2e7d32" font-size="9">push main</text>
-<text x="44" y="453" fill="#555" font-size="10">trigger: <tspan fill="#2e7d32">worker/**</tspan></text>
-<text x="44" y="468" fill="#555" font-size="10">pytest  →  docker build  →  push <tspan font-weight="bold">ghcr.io/ilaycohen12/betops-worker:sha-XXXXXXX</tspan></text>
-<text x="44" y="483" fill="#555" font-size="10">checkout betops-infra (INFRA_REPO_PAT)  →  sed values.yaml  →  git commit + push</text>
-<text x="44" y="496" fill="#888" font-size="9">commit msg: "chore: bump worker to sha-XXXXXXX"  ·  triggers terraform.yml in betops-infra</text>
+<!-- deploy-observability.yml -->
+<rect x="15" y="360" width="490" height="52" rx="6" fill="#fff" stroke="#e8e8e8" stroke-width="1"/>
+<rect x="15" y="360" width="5" height="52" rx="3" fill="#2e7d32"/>
+<text x="30" y="380" font-weight="bold" fill="#333" font-size="11">deploy-observability.yml</text>
+<rect x="428" y="366" width="72" height="16" rx="4" fill="#e8f5e9"/>
+<text x="464" y="378" text-anchor="middle" fill="#2e7d32" font-size="9">push main</text>
+<text x="30" y="400" fill="#666" font-size="10">docker build sqs-exporter → push GHCR → bump image tag in betops-infra</text>
 
-<!-- ── deploy-observability.yml ── -->
-<rect x="24" y="514" width="492" height="84" rx="8" fill="#fff" stroke="#2e7d32" stroke-width="1.8"/>
-<rect x="24" y="514" width="8" height="84" rx="4" fill="#2e7d32"/>
-<text x="44" y="531" font-weight="bold" fill="#1b5e20" font-size="11">deploy-observability.yml</text>
-<rect x="430" y="519" width="80" height="16" rx="4" fill="#e8f5e9"/>
-<text x="470" y="530" text-anchor="middle" fill="#2e7d32" font-size="9">push main</text>
-<text x="44" y="547" fill="#555" font-size="10">trigger: <tspan fill="#2e7d32">observability/**</tspan></text>
-<text x="44" y="562" fill="#555" font-size="10">docker build  →  push <tspan font-weight="bold">ghcr.io/ilaycohen12/betops-sqs-exporter:sha-XXXXXXX</tspan></text>
-<text x="44" y="577" fill="#555" font-size="10">checkout betops-infra (INFRA_REPO_PAT)  →  sed values.yaml  →  git commit + push</text>
-<text x="44" y="590" fill="#888" font-size="9">commit msg: "chore: bump sqs-exporter to sha-XXXXXXX"</text>
+<!-- betops-infra repo -->
+<rect x="535" y="18" width="520" height="432" rx="10" fill="#f6f8fa" stroke="#6a1b9a" stroke-width="2"/>
+<rect x="535" y="18" width="520" height="44" rx="10" fill="#4527a0"/>
+<rect x="535" y="50" width="520" height="12" fill="#4527a0"/>
+<text x="795" y="40" text-anchor="middle" font-weight="bold" fill="#fff" font-size="13">ilaycohen12 / betops-infra</text>
+<text x="795" y="56" text-anchor="middle" fill="#ce93d8" font-size="10">Terraform · Helm charts · infra workflows</text>
 
-<!-- secrets box betops -->
-<rect x="24" y="610" width="492" height="50" rx="8" fill="#fce4ec" stroke="#c2185b" stroke-width="1.2"/>
-<text x="270" y="630" text-anchor="middle" font-weight="bold" fill="#880e4f" font-size="11">Secrets in betops</text>
-<text x="270" y="647" text-anchor="middle" fill="#c2185b" font-size="10">AWS_ACCESS_KEY_ID  ·  AWS_SECRET_ACCESS_KEY  ·  INFRA_REPO_PAT  ·  GHCR_PAT  ·  DB_HOST  ·  DB_PASSWORD  ·  SQS_QUEUE_URL  ·  JWT_SECRET  ·  K3S_KUBECONFIG  ·  TAILSCALE_AUTH_KEY</text>
+<!-- terraform.yml -->
+<rect x="545" y="70" width="500" height="52" rx="6" fill="#fff" stroke="#e8e8e8" stroke-width="1"/>
+<rect x="545" y="70" width="5" height="52" rx="3" fill="#7b1fa2"/>
+<text x="560" y="90" font-weight="bold" fill="#333" font-size="11">terraform.yml</text>
+<rect x="958" y="76" width="72" height="16" rx="4" fill="#f3e5f5"/>
+<text x="994" y="88" text-anchor="middle" fill="#7b1fa2" font-size="9">push main / dev</text>
+<text x="560" y="110" fill="#666" font-size="10">tflint → plan → apply  —  manages all AWS infrastructure</text>
 
-<!-- GHCR box -->
-<rect x="24" y="672" width="492" height="46" rx="8" fill="#161b22" stroke="#30363d" stroke-width="1.5"/>
-<text x="270" y="691" text-anchor="middle" font-weight="bold" fill="#fff" font-size="11">GHCR  —  ghcr.io/ilaycohen12</text>
-<text x="270" y="708" text-anchor="middle" fill="#8b949e" font-size="10">betops-worker:sha-XXXXXXX  ·  betops-sqs-exporter:sha-XXXXXXX  ·  also tagged :latest</text>
+<!-- migrate.yml -->
+<rect x="545" y="128" width="500" height="52" rx="6" fill="#fff" stroke="#e8e8e8" stroke-width="1"/>
+<rect x="545" y="128" width="5" height="52" rx="3" fill="#37474f"/>
+<text x="560" y="148" font-weight="bold" fill="#333" font-size="11">migrate.yml</text>
+<rect x="948" y="134" width="82" height="16" rx="4" fill="#eceff1"/>
+<text x="989" y="146" text-anchor="middle" fill="#37474f" font-size="9">manual dispatch</text>
+<text x="560" y="168" fill="#666" font-size="10">invoke Lambda with migrate / seed  ·  env: prod / dev</text>
 
-<!-- ══ BETOPS-INFRA REPO ══ -->
-<rect x="570" y="50" width="520" height="700" rx="14" fill="#f3e5f5" stroke="#6a1b9a" stroke-width="2.5"/>
-<rect x="570" y="50" width="520" height="42" rx="14" fill="#6a1b9a"/>
-<rect x="570" y="78" width="520" height="14" fill="#6a1b9a"/>
-<text x="830" y="78" text-anchor="middle" font-size="15" font-weight="bold" fill="#fff">ilaycohen12 / betops-infra</text>
-<text x="830" y="92" text-anchor="middle" font-size="10" fill="#ce93d8">Terraform · Helm charts · infra workflows</text>
+<!-- bootstrap-argocd.yml -->
+<rect x="545" y="186" width="500" height="52" rx="6" fill="#fff" stroke="#6a1b9a" stroke-width="1.5"/>
+<rect x="545" y="186" width="5" height="52" rx="3" fill="#6a1b9a"/>
+<text x="560" y="206" font-weight="bold" fill="#333" font-size="11">bootstrap-argocd.yml  ⏳</text>
+<rect x="948" y="192" width="82" height="16" rx="4" fill="#ede7f6"/>
+<text x="989" y="204" text-anchor="middle" fill="#6a1b9a" font-size="9">manual dispatch</text>
+<text x="560" y="226" fill="#666" font-size="10">install ArgoCD on k3s · apply CRDs · register worker + observability apps</text>
 
-<!-- ── terraform.yml ── -->
-<rect x="584" y="108" width="492" height="100" rx="8" fill="#fff" stroke="#7b1fa2" stroke-width="1.8"/>
-<rect x="584" y="108" width="8" height="100" rx="4" fill="#7b1fa2"/>
-<text x="604" y="125" font-weight="bold" fill="#4a148c" font-size="11">terraform.yml</text>
-<rect x="990" y="113" width="80" height="16" rx="4" fill="#ede7f6"/>
-<text x="1030" y="124" text-anchor="middle" fill="#6a1b9a" font-size="9">push main/dev</text>
-<text x="604" y="141" fill="#555" font-size="10">trigger: <tspan fill="#7b1fa2">terraform/**</tspan>  ·  also: tag bump commit from betops triggers this</text>
-<text x="604" y="156" fill="#555" font-size="10">set-env (main=prod / dev=dev)  →  lint (tflint)  →  plan  →  apply</text>
-<text x="604" y="171" fill="#555" font-size="10">on PR: posts plan diff as comment  ·  apply only on push</text>
-<text x="604" y="186" fill="#888" font-size="9">state in s3://betops-terraform-state  ·  manages all AWS resources</text>
-<text x="604" y="199" fill="#888" font-size="9">import existing IAM roles on apply (idempotent)</text>
+<!-- restart-tailscale.yml -->
+<rect x="545" y="244" width="500" height="52" rx="6" fill="#fff" stroke="#e8e8e8" stroke-width="1"/>
+<rect x="545" y="244" width="5" height="52" rx="3" fill="#37474f"/>
+<text x="560" y="264" font-weight="bold" fill="#333" font-size="11">restart-tailscale.yml</text>
+<rect x="948" y="250" width="82" height="16" rx="4" fill="#eceff1"/>
+<text x="989" y="262" text-anchor="middle" fill="#37474f" font-size="9">manual dispatch</text>
+<text x="560" y="284" fill="#666" font-size="10">terraform apply -replace EC2  —  re-registers Tailscale router</text>
 
-<!-- ── migrate.yml ── -->
-<rect x="584" y="218" width="492" height="84" rx="8" fill="#fff" stroke="#37474f" stroke-width="1.8"/>
-<rect x="584" y="218" width="8" height="84" rx="4" fill="#37474f"/>
-<text x="604" y="235" font-weight="bold" fill="#263238" font-size="11">migrate.yml</text>
-<rect x="975" y="223" width="95" height="16" rx="4" fill="#eceff1"/>
-<text x="1022" y="234" text-anchor="middle" fill="#37474f" font-size="9">workflow_dispatch</text>
-<text x="604" y="251" fill="#555" font-size="10">inputs: environment (prod/dev)  ·  action (migrate/seed)</text>
-<text x="604" y="266" fill="#555" font-size="10">invokes betops-api Lambda with <tspan font-family="monospace">{"action":"migrate"}</tspan></text>
-<text x="604" y="281" fill="#555" font-size="10">dev: resolves betops/dev-db-credentials ARN first  →  passes to Lambda</text>
-<text x="604" y="294" fill="#888" font-size="9">prints Lambda response JSON</text>
+<!-- Helm charts section -->
+<rect x="545" y="308" width="500" height="132" rx="6" fill="#f3e5f5" stroke="#6a1b9a" stroke-width="1.5"/>
+<text x="560" y="328" font-weight="bold" fill="#4a148c" font-size="11">helm/  —  ArgoCD watches these on main branch</text>
+<text x="560" y="350" fill="#555" font-size="10">helm/worker/values.yaml  ←  image.tag bumped by deploy-worker.yml</text>
+<text x="560" y="370" fill="#555" font-size="10">helm/observability/values.yaml  ←  sqsExporter.tag bumped by deploy-observability.yml</text>
+<text x="560" y="392" fill="#777" font-size="10">argocd/worker-app.yaml  →  syncs helm/worker/ to k3s  ·  prune + selfHeal</text>
+<text x="560" y="412" fill="#777" font-size="10">argocd/observability-app.yaml  →  syncs helm/observability/ to k3s</text>
+<text x="560" y="430" fill="#aaa" font-size="9">CreateNamespace: true  ·  namespace: betops</text>
 
-<!-- ── restart-tailscale.yml ── -->
-<rect x="584" y="312" width="492" height="84" rx="8" fill="#fff" stroke="#bf360c" stroke-width="1.8"/>
-<rect x="584" y="312" width="8" height="84" rx="4" fill="#bf360c"/>
-<text x="604" y="329" font-weight="bold" fill="#7f0000" font-size="11">restart-tailscale.yml</text>
-<rect x="975" y="317" width="95" height="16" rx="4" fill="#fbe9e7"/>
-<text x="1022" y="328" text-anchor="middle" fill="#bf360c" font-size="9">workflow_dispatch</text>
-<text x="604" y="345" fill="#555" font-size="10">terraform init  →  terraform apply -replace EC2 instance</text>
-<text x="604" y="360" fill="#555" font-size="10">force-replaces the Tailscale EC2 (new ephemeral key, re-registers with Tailscale)</text>
-<text x="604" y="375" fill="#555" font-size="10">prints new instance public IP / DNS</text>
-<text x="604" y="388" fill="#888" font-size="9">use when Tailscale VPN drops or EC2 gets stuck</text>
-
-<!-- Helm charts box -->
-<rect x="584" y="406" width="492" height="110" rx="8" fill="#fff" stroke="#6a1b9a" stroke-width="1.5"/>
-<rect x="584" y="406" width="8" height="110" rx="4" fill="#6a1b9a"/>
-<text x="604" y="423" font-weight="bold" fill="#4a148c" font-size="11">helm/  —  Helm charts  (ArgoCD will watch these)</text>
-<text x="604" y="441" fill="#555" font-size="10">helm/worker/values.yaml  ←  image.tag bumped by deploy-worker.yml</text>
-<text x="604" y="456" fill="#555" font-size="10">helm/observability/values.yaml  ←  sqsExporter.image.tag bumped by deploy-observability.yml</text>
-<text x="604" y="475" fill="#888" font-size="10">templates/deployment.yml uses {{ .Values.image.tag }} — the only templated field</text>
-<text x="604" y="490" fill="#888" font-size="10">currently applied manually (kubectl / ArgoCD Phase 4)</text>
-<text x="604" y="505" fill="#6a1b9a" font-size="9" font-weight="bold">charts: helm/worker/  ·  helm/observability/</text>
-
-<!-- secrets box betops-infra -->
-<rect x="584" y="528" width="492" height="50" rx="8" fill="#fce4ec" stroke="#c2185b" stroke-width="1.2"/>
-<text x="830" y="548" text-anchor="middle" font-weight="bold" fill="#880e4f" font-size="11">Secrets in betops-infra</text>
-<text x="830" y="565" text-anchor="middle" fill="#c2185b" font-size="10">AWS_ACCESS_KEY_ID  ·  AWS_SECRET_ACCESS_KEY  ·  TAILSCALE_AUTH_KEY  ·  JWT_SECRET</text>
-
-<!-- AWS targets -->
-<rect x="584" y="590" width="230" height="46" rx="8" fill="#fff8e1" stroke="#f57f17" stroke-width="1.5"/>
-<text x="699" y="609" text-anchor="middle" font-weight="bold" fill="#e65100" font-size="11">AWS  (us-east-1)</text>
-<text x="699" y="626" text-anchor="middle" fill="#e65100" font-size="10">Lambda  ·  RDS  ·  S3  ·  CloudFront  ·  SQS  ·  EC2</text>
-
-<!-- k3s target -->
-<rect x="846" y="590" width="230" height="46" rx="8" fill="#e8f5e9" stroke="#388e3c" stroke-width="1.5"/>
-<text x="961" y="609" text-anchor="middle" font-weight="bold" fill="#1b5e20" font-size="11">k3s  (homelab)</text>
-<text x="961" y="626" text-anchor="middle" fill="#2e7d32" font-size="10">betops-worker  ·  alloy  ·  exporters</text>
-
-<!-- terraform state -->
-<rect x="584" y="648" width="492" height="46" rx="8" fill="#e8eaf6" stroke="#3f51b5" stroke-width="1.5"/>
-<text x="830" y="667" text-anchor="middle" font-weight="bold" fill="#283593" font-size="11">Terraform State  —  S3</text>
-<text x="830" y="684" text-anchor="middle" fill="#3949ab" font-size="10">s3://betops-terraform-state  ·  shared between prod and dev envs</text>
-
-<!-- ══ CROSS-REPO ARROWS ══ -->
-
-<!-- deploy-worker → betops-infra (tag bump) -->
-<path d="M 516 462 C 545 462 545 220 570 220" fill="none" stroke="#6a1b9a" stroke-width="2.5" stroke-dasharray="8,4" marker-end="url(#cb)"/>
-<rect x="523" y="330" width="46" height="30" rx="4" fill="#ede7f6"/>
-<text x="546" y="343" text-anchor="middle" fill="#6a1b9a" font-size="9" font-weight="bold">PAT</text>
-<text x="546" y="355" text-anchor="middle" fill="#6a1b9a" font-size="8">tag bump</text>
-
-<!-- deploy-observability → betops-infra (tag bump) -->
-<path d="M 516 556 C 548 556 548 240 570 240" fill="none" stroke="#6a1b9a" stroke-width="2" stroke-dasharray="8,4" marker-end="url(#cb)"/>
-
-<!-- deploy-worker/obs → GHCR -->
-<line x1="270" y1="718" x2="270" y2="740" stroke="#555" stroke-width="1.5" marker-end="url(#ca)"/>
-<rect x="200" y="730" width="140" height="18" rx="4" fill="#f5f5f5"/>
-<text x="270" y="743" text-anchor="middle" fill="#555" font-size="9">docker push</text>
-
-<!-- terraform.yml → AWS -->
-<line x1="699" y1="590" x2="699" y2="636" stroke="#e65100" stroke-width="1.8" marker-end="url(#cd)"/>
-
-<!-- migrate.yml → AWS (Lambda) -->
-<line x1="750" y1="302" x2="720" y2="590" stroke="#37474f" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#ca)"/>
-
-<!-- restart-tailscale → AWS (EC2) -->
-<line x1="790" y1="396" x2="740" y2="590" stroke="#bf360c" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#ca)"/>
-
-<!-- helm → k3s (future ArgoCD) -->
-<line x1="961" y1="516" x2="961" y2="590" stroke="#6a1b9a" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#cb)"/>
-<text x="975" y="557" fill="#6a1b9a" font-size="9">ArgoCD (Phase 4)</text>
-
-<!-- deploy-frontend → S3/CF (AWS) -->
-<line x1="270" y1="332" x2="450" y2="332" stroke="#1565c0" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#cc)"/>
-<text x="360" y="326" text-anchor="middle" fill="#1565c0" font-size="9">S3 + CloudFront</text>
-
-<!-- deploy-lambda → Lambda -->
-<line x1="410" y1="410" x2="460" y2="410" stroke="#e65100" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#cd)"/>
-<text x="435" y="404" text-anchor="middle" fill="#e65100" font-size="9">Lambda</text>
-
+<!-- Cross-repo arrows (short — repos are adjacent) -->
+<path d="M 505 328 C 522 328 522 356 535 356" fill="none" stroke="#6a1b9a" stroke-width="2" stroke-dasharray="6,3" marker-end="url(#acp)"/>
+<path d="M 505 386 C 522 386 522 372 535 372" fill="none" stroke="#6a1b9a" stroke-width="2" stroke-dasharray="6,3" marker-end="url(#acp)"/>
+<text x="518" y="352" text-anchor="middle" fill="#6a1b9a" font-size="9">PAT</text>
 </svg>
 </div>
 
